@@ -39,6 +39,9 @@ fun DashboardScreen(
     val proveedores by viewModel.proveedoresConSaldo.collectAsState()
     val transacciones by viewModel.transacciones.collectAsState()
     val compras by viewModel.compras.collectAsState()
+    val articulos by viewModel.articulosInventario.collectAsState()
+
+    val articulosBajoStock = remember(articulos) { articulos.filter { it.stockActual <= it.stockMinimo } }
 
     // Financial calculations
     val totalCxC = remember(clientes) {
@@ -181,7 +184,7 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Menú Lateral de Módulos (9)",
+                            text = "Menú Lateral de Módulos (10)",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onBackground
@@ -287,6 +290,78 @@ fun DashboardScreen(
             }
         }
 
+        // Inventario Quick Alert KPI if low stock or inventory summary
+        item {
+            Card(
+                onClick = { onNavigateToModule(AppModule.INVENTARIO) },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (articulosBajoStock.isNotEmpty()) SoftRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("kpi_inventario_summary_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (articulosBajoStock.isNotEmpty()) SoftRed else CafeDarkBrown),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("📦", fontSize = 22.sp)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Control de Inventario",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (articulosBajoStock.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = SoftRed,
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "${articulosBajoStock.size} ALERTA",
+                                        color = LightText,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = if (articulosBajoStock.isNotEmpty())
+                                "${articulosBajoStock.size} insumos con stock por debajo del mínimo"
+                            else
+                                "${articulos.size} artículos en almacén con stock adecuado",
+                            fontSize = 12.sp,
+                            color = if (articulosBajoStock.isNotEmpty()) SoftRed else SoftGray
+                        )
+                    }
+                    Text(
+                        text = "Ver Stock ➔",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CafeDarkBrown
+                    )
+                }
+            }
+        }
+
         // Quick Access Modules Grid
         item {
             Text(
@@ -306,9 +381,9 @@ fun DashboardScreen(
                     onClick = { onNavigateToModule(AppModule.VENTAS) }
                 )
                 QuickModuleButton(
-                    module = AppModule.CLIENTES,
+                    module = AppModule.INVENTARIO,
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigateToModule(AppModule.CLIENTES) }
+                    onClick = { onNavigateToModule(AppModule.INVENTARIO) }
                 )
                 QuickModuleButton(
                     module = AppModule.COMPRAS,
@@ -316,9 +391,9 @@ fun DashboardScreen(
                     onClick = { onNavigateToModule(AppModule.COMPRAS) }
                 )
                 QuickModuleButton(
-                    module = AppModule.PROVEEDORES,
+                    module = AppModule.CLIENTES,
                     modifier = Modifier.weight(1f),
-                    onClick = { onNavigateToModule(AppModule.PROVEEDORES) }
+                    onClick = { onNavigateToModule(AppModule.CLIENTES) }
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -326,6 +401,11 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                QuickModuleButton(
+                    module = AppModule.PROVEEDORES,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onNavigateToModule(AppModule.PROVEEDORES) }
+                )
                 QuickModuleButton(
                     module = AppModule.CXC,
                     modifier = Modifier.weight(1f),
@@ -341,9 +421,15 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f),
                     onClick = { onNavigateToModule(AppModule.REPORTES) }
                 )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 QuickModuleButton(
                     module = AppModule.AJUSTES,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(0.5f),
                     onClick = { onNavigateToModule(AppModule.AJUSTES) }
                 )
             }

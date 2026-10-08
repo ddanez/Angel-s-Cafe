@@ -21,7 +21,10 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
         proveedorDao = db.proveedorDao(),
         compraDao = db.compraDao(),
         pagoProveedorDao = db.pagoProveedorDao(),
-        configuracionDao = db.configuracionDao()
+        configuracionDao = db.configuracionDao(),
+        inventarioDao = db.inventarioDao(),
+        movimientoInventarioDao = db.movimientoInventarioDao(),
+        recetaIngredienteDao = db.recetaIngredienteDao()
     )
 
     val clientesConSaldo: StateFlow<List<ClienteConSaldo>> = repository.clientesConSaldo
@@ -72,6 +75,29 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = ConfiguracionComercio()
         )
+
+    val articulosInventario: StateFlow<List<ArticuloInventario>> = repository.articulosInventario
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val movimientosInventario: StateFlow<List<MovimientoInventario>> = repository.movimientosInventario
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val recetasIngredientes: StateFlow<List<RecetaIngrediente>> = repository.recetasIngredientes
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+
 
     // State for selected client in client detail
     private val _selectedClienteId = MutableStateFlow<Int?>(null)
@@ -301,4 +327,117 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
             repository.saveConfiguracion(config)
         }
     }
+
+    // --- INVENTARIO ---
+    fun agregarArticuloInventario(
+        codigo: String,
+        nombre: String,
+        tipoInventario: String = "MATERIA_PRIMA",
+        categoria: String,
+        unidadMedida: String,
+        stockInicial: Double,
+        stockMinimo: Double,
+        costoUnitario: Double,
+        precioVenta: Double,
+        notas: String
+    ) {
+        viewModelScope.launch {
+            val art = ArticuloInventario(
+                codigo = codigo.trim(),
+                nombre = nombre.trim(),
+                tipoInventario = tipoInventario,
+                categoria = categoria.trim(),
+                unidadMedida = unidadMedida.trim(),
+                stockActual = stockInicial,
+                stockMinimo = stockMinimo,
+                costoUnitario = costoUnitario,
+                precioVenta = precioVenta,
+                notas = notas.trim()
+            )
+            val newId = repository.addArticuloInventario(art).toInt()
+            if (stockInicial > 0) {
+                repository.registrarMovimientoInventario(
+                    articuloId = newId,
+                    articuloNombre = art.nombre,
+                    tipo = if (tipoInventario == "PRODUCTO_TERMINADO") "PRODUCCION" else "ENTRADA",
+                    cantidad = stockInicial,
+                    stockAnterior = 0.0,
+                    stockNuevo = stockInicial,
+                    motivo = "Inventario inicial al crear artículo ($tipoInventario)"
+                )
+            }
+        }
+    }
+
+    fun editarArticuloInventario(articulo: ArticuloInventario) {
+        viewModelScope.launch {
+            repository.updateArticuloInventario(articulo)
+        }
+    }
+
+    fun borrarArticuloInventario(articulo: ArticuloInventario) {
+        viewModelScope.launch {
+            repository.deleteArticuloInventario(articulo)
+        }
+    }
+
+    fun registrarAjusteO_MovimientoStock(
+        articulo: ArticuloInventario,
+        tipo: String, // "ENTRADA", "SALIDA", "AJUSTE"
+        cantidad: Double,
+        motivo: String
+    ) {
+        viewModelScope.launch {
+            val stockAnterior = articulo.stockActual
+            val stockNuevo = when (tipo) {
+                "ENTRADA" -> stockAnterior + cantidad
+                "SALIDA" -> (stockAnterior - cantidad).coerceAtLeast(0.0)
+                "AJUSTE" -> cantidad // El usuario define el nuevo stock real
+                else -> stockAnterior
+            }
+            val cantAfectada = if (tipo == "AJUSTE") kotlin.math.abs(stockNuevo - stockAnterior) else cantidad
+            val artActualizado = articulo.copy(stockActual = stockNuevo)
+            repository.updateArticuloInventario(artActualizado)
+            repository.registrarMovimientoInventario(
+                articuloId = articulo.id,
+                articuloNombre = articulo.nombre,
+                tipo = tipo,
+                cantidad = cantAfectada,
+                stockAnterior = stockAnterior,
+                stockNuevo = stockNuevo,
+                motivo = motivo.trim().ifEmpty { "Ajuste de inventario manual" }
+            )
+        }
+    }
+
+    fun borrarMovimientoInventario(movimiento: MovimientoInventario) {
+        viewModelScope.launch {
+            repository.deleteMovimientoInventario(movimiento)
+        }
+    }
+
+    // --- RECETAS Y ELABORACIÓN DE PRODUCTO TERMINADO ---
+    fun guardarRecetaIngredientes(productoId: Int, ingredientes: List<RecetaIngrediente>) {
+        viewModelScope.launch {
+            repository.guardarIngredientesReceta(productoId, ingredientes)
+        }
+    }
+
+    fun elaborarProductoParaVitrina(
+        productoTerminadoId: Int,
+        cantidad: Double,
+        motivo: String = "Elaboración para vitrina de ventas",
+        onResultado: (mensajeError: String?) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val res = repository.elaborarProductoTerminado(
+                productoTerminadoId = productoTerminadoId,
+                cantidadElaborada = cantidad,
+                motivoProduccion = motivo
+            )
+            onResultado(res)
+        }
+    }
 }
+
+

@@ -10,6 +10,7 @@ enum class AppModule(
     PROVEEDORES("Proveedores", "Gestión y catálogo de proveedores", "🚚", "nav_proveedores"),
     CLIENTES("Clientes", "Cartera y cuentas de clientes", "👥", "nav_clientes"),
     COMPRAS("Compras", "Registro de compras e insumos", "📥", "nav_compras"),
+    INVENTARIO("Inventario", "Control de stock, insumos y mermas", "📦", "nav_inventario"),
     VENTAS("Ventas", "Punto de venta y facturación", "🛍️", "nav_ventas"),
     CXC("CXC", "Cuentas por cobrar a clientes", "💰", "nav_cxc"),
     CXP("CXP", "Cuentas por pagar a proveedores", "📑", "nav_cxp"),

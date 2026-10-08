@@ -114,3 +114,74 @@ interface ConfiguracionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(config: ConfiguracionComercio)
 }
+
+@Dao
+interface InventarioDao {
+    @Query("SELECT * FROM inventario ORDER BY nombre ASC")
+    fun getAllArticulos(): Flow<List<ArticuloInventario>>
+
+    @Query("SELECT * FROM inventario WHERE tipoInventario = :tipo ORDER BY nombre ASC")
+    fun getArticulosPorTipo(tipo: String): Flow<List<ArticuloInventario>>
+
+    @Query("SELECT * FROM inventario WHERE id = :id")
+    suspend fun getArticuloById(id: Int): ArticuloInventario?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertArticulo(articulo: ArticuloInventario): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertArticulos(articulos: List<ArticuloInventario>)
+
+    @Update
+    suspend fun updateArticulo(articulo: ArticuloInventario)
+
+    @Delete
+    suspend fun deleteArticulo(articulo: ArticuloInventario)
+
+    @Query("SELECT COUNT(*) FROM inventario")
+    suspend fun getCount(): Int
+}
+
+@Dao
+interface MovimientoInventarioDao {
+    @Query("SELECT * FROM movimientos_inventario ORDER BY fecha DESC")
+    fun getAllMovimientos(): Flow<List<MovimientoInventario>>
+
+    @Query("SELECT * FROM movimientos_inventario WHERE articuloId = :articuloId ORDER BY fecha DESC")
+    fun getMovimientosByArticulo(articuloId: Int): Flow<List<MovimientoInventario>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMovimiento(movimiento: MovimientoInventario): Long
+
+    @Delete
+    suspend fun deleteMovimiento(movimiento: MovimientoInventario)
+}
+
+@Dao
+interface RecetaIngredienteDao {
+    @Query("SELECT * FROM recetas_ingredientes ORDER BY id ASC")
+    fun getAllRecetas(): Flow<List<RecetaIngrediente>>
+
+    @Query("SELECT * FROM recetas_ingredientes WHERE productoTerminadoId = :productoId")
+    fun getIngredientesByProducto(productoId: Int): Flow<List<RecetaIngrediente>>
+
+    @Query("SELECT * FROM recetas_ingredientes WHERE productoTerminadoId = :productoId")
+    suspend fun getIngredientesByProductoList(productoId: Int): List<RecetaIngrediente>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIngrediente(ingrediente: RecetaIngrediente): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIngredientes(ingredientes: List<RecetaIngrediente>)
+
+    @Delete
+    suspend fun deleteIngrediente(ingrediente: RecetaIngrediente)
+
+    @Query("DELETE FROM recetas_ingredientes WHERE productoTerminadoId = :productoId")
+    suspend fun deleteIngredientesDeProducto(productoId: Int)
+
+    @Query("SELECT COUNT(*) FROM recetas_ingredientes")
+    suspend fun getCount(): Int
+}
+
+

@@ -38,10 +38,12 @@ fun MainAppScaffold(
     val clientes by viewModel.clientesConSaldo.collectAsState()
     val proveedores by viewModel.proveedoresConSaldo.collectAsState()
     val carrito by viewModel.carrito.collectAsState()
+    val articulos by viewModel.articulosInventario.collectAsState()
 
     val deudoresCount = remember(clientes) { clientes.count { it.saldoPendiente > 0.0 } }
     val proveedoresDeudaCount = remember(proveedores) { proveedores.count { it.saldoPendienteCXP > 0.0 } }
     val carritoCount = remember(carrito) { carrito.values.sum() }
+    val articulosBajoStockCount = remember(articulos) { articulos.count { it.stockActual <= it.stockMinimo } }
 
     // Intercept back button:
     // 1. If drawer is open -> close it
@@ -123,10 +125,11 @@ fun MainAppScaffold(
                             AppModule.CXC -> if (deudoresCount > 0) "$deudoresCount" else null
                             AppModule.CXP -> if (proveedoresDeudaCount > 0) "$proveedoresDeudaCount" else null
                             AppModule.VENTAS -> if (carritoCount > 0) "$carritoCount" else null
+                            AppModule.INVENTARIO -> if (articulosBajoStockCount > 0) "!$articulosBajoStockCount" else null
                             else -> null
                         }
                         val badgeColor = when (module) {
-                            AppModule.CXC, AppModule.CXP -> SoftRed
+                            AppModule.CXC, AppModule.CXP, AppModule.INVENTARIO -> SoftRed
                             AppModule.VENTAS -> GoldenCrema
                             else -> CafeBrown
                         }
@@ -302,6 +305,7 @@ fun MainAppScaffold(
                     AppModule.PROVEEDORES -> ProveedoresScreen(viewModel = viewModel)
                     AppModule.CLIENTES -> ClientesScreen(viewModel = viewModel)
                     AppModule.COMPRAS -> ComprasScreen(viewModel = viewModel)
+                    AppModule.INVENTARIO -> InventarioScreen(viewModel = viewModel)
                     AppModule.VENTAS -> VentasScreen(viewModel = viewModel)
                     AppModule.CXC -> CxcScreen(viewModel = viewModel)
                     AppModule.CXP -> CxpScreen(viewModel = viewModel)

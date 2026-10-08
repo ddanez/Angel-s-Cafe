@@ -14,9 +14,12 @@ import com.example.data.model.*
         Proveedor::class,
         Compra::class,
         PagoProveedor::class,
-        ConfiguracionComercio::class
+        ConfiguracionComercio::class,
+        ArticuloInventario::class,
+        MovimientoInventario::class,
+        RecetaIngrediente::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +30,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun compraDao(): CompraDao
     abstract fun pagoProveedorDao(): PagoProveedorDao
     abstract fun configuracionDao(): ConfiguracionDao
+    abstract fun inventarioDao(): InventarioDao
+    abstract fun movimientoInventarioDao(): MovimientoInventarioDao
+    abstract fun recetaIngredienteDao(): RecetaIngredienteDao
+
+
 
     companion object {
         @Volatile

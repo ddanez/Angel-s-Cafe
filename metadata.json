@@ -1,0 +1,6 @@
+{
+  "name": "Angel's Cafe",
+  "description": "Gestión de ventas y cuentas por cobrar para pequeñas ventas de comida.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -3,13 +3,14 @@ package com.example
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.ui.SazonViewModel
-import com.example.ui.screens.DashboardScreen
+import com.example.ui.navigation.MainAppScaffold
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,13 +18,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    DashboardScreen(viewModel = viewModel)
+                    MainAppScaffold(viewModel = viewModel)
                 }
             }
         }

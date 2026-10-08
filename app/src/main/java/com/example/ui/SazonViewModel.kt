@@ -125,7 +125,87 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             repository.seedInitialDataIfNeeded()
+            // Comprobación de actualización diaria de tasa si está habilitada
+            verificarYActualizarTasaDiaria()
         }
+    }
+
+    // --- TASA DE CAMBIO USD / BOLÍVARES (BS) ---
+    private val _actualizandoTasa = MutableStateFlow(false)
+    val actualizandoTasa: StateFlow<Boolean> = _actualizandoTasa.asStateFlow()
+
+    private val _mensajeTasa = MutableStateFlow<String?>(null)
+    val mensajeTasa: StateFlow<String?> = _mensajeTasa.asStateFlow()
+
+    fun actualizarTasaCambioManual(nuevaTasa: Double) {
+        if (nuevaTasa <= 0) return
+        viewModelScope.launch {
+            val cfg = configuracion.value
+            val actualizada = cfg.copy(
+                tasaCambioBs = nuevaTasa,
+                fechaActualizacionTasa = System.currentTimeMillis()
+            )
+            repository.saveConfiguracion(actualizada)
+            _mensajeTasa.value = "Tasa fijada manualmente a Bs. ${String.format(java.util.Locale.US, "%.2f", nuevaTasa)}"
+        }
+    }
+
+    fun toggleAutoActualizarTasa(habilitado: Boolean) {
+        viewModelScope.launch {
+            val cfg = configuracion.value
+            repository.saveConfiguracion(cfg.copy(autoActualizarTasa = habilitado))
+            if (habilitado) {
+                actualizarTasaDesdeInternet(forzar = true)
+            }
+        }
+    }
+
+    fun actualizarTasaDesdeInternet(forzar: Boolean = false, onCompletado: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            _actualizandoTasa.value = true
+            try {
+                val tasaOnline = com.example.data.network.TasaCambioService.obtenerTasaDolarBs()
+                if (tasaOnline != null && tasaOnline > 0) {
+                    val cfg = configuracion.value
+                    repository.saveConfiguracion(
+                        cfg.copy(
+                            tasaCambioBs = tasaOnline,
+                            fechaActualizacionTasa = System.currentTimeMillis()
+                        )
+                    )
+                    val msg = "Tasa del día actualizada a Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)} por dólar"
+                    _mensajeTasa.value = msg
+                    onCompletado?.invoke(true, msg)
+                } else {
+                    val msg = "No se pudo consultar el servicio en línea. Se mantiene la tasa actual de Bs. ${configuracion.value.tasaCambioBs}"
+                    _mensajeTasa.value = msg
+                    onCompletado?.invoke(false, msg)
+                }
+            } catch (e: Exception) {
+                val msg = "Error al actualizar tasa: ${e.message}"
+                _mensajeTasa.value = msg
+                onCompletado?.invoke(false, msg)
+            } finally {
+                _actualizandoTasa.value = false
+            }
+        }
+    }
+
+    private fun verificarYActualizarTasaDiaria() {
+        viewModelScope.launch {
+            val cfg = configuracion.first()
+            if (!cfg.autoActualizarTasa) return@launch
+            val unDiaMillis = 24 * 60 * 60 * 1000L
+            val tiempoTranscurrido = System.currentTimeMillis() - cfg.fechaActualizacionTasa
+            // Si pasaron más de 12 horas o es un nuevo día, intentar actualizar
+            if (tiempoTranscurrido > unDiaMillis / 2) {
+                actualizarTasaDesdeInternet(forzar = false)
+            }
+        }
+    }
+
+    fun limpiarMensajeTasa() {
+        _mensajeTasa.value = null
     }
 
     // --- CLIENTS ---
@@ -450,26 +530,64 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // --- LICENCIAMIENTO ---
-    fun activarLicencia(clave: String, titular: String, onResultado: (Boolean, String) -> Unit) {
-        val claveLimpia = clave.trim().uppercase()
-        val titularLimpio = titular.trim()
+    /**
+     * Activa o modifica la licencia con las opciones:
+     * - MENSUAL (30 días)
+     * - SEMESTRAL (180 días)
+     * - ANUAL (365 días)
+     * - VITALICIA (Sin caducidad)
+     * Validada con la clave maestra "99 00" (o formato "9900").
+     */
+    fun activarLicenciaPlan(
+        clave: String,
+        plan: String, // "MENSUAL", "SEMESTRAL", "ANUAL", "VITALICIA"
+        titular: String,
+        onResultado: (Boolean, String) -> Unit
+    ) {
+        val claveNormalizada = clave.trim().replace(" ", "")
+        val claveValida = claveNormalizada == "9900" || clave.trim() == "99 00"
 
-        if (claveLimpia.length < 8) {
-            onResultado(false, "La clave de licencia debe tener al menos 8 caracteres.")
+        if (!claveValida) {
+            onResultado(false, "Clave de activación incorrecta. Ingrese la clave autorizada: 99 00")
             return
+        }
+
+        val titularLimpio = titular.trim().ifBlank { configuracion.value.titularLicencia }
+        val ahora = System.currentTimeMillis()
+        val dias = when (plan) {
+            "MENSUAL" -> 30L
+            "SEMESTRAL" -> 180L
+            "ANUAL" -> 365L
+            else -> 0L // Vitalicia
+        }
+
+        val fechaVencimiento = if (dias > 0) ahora + (dias * 24 * 60 * 60 * 1000L) else 0L
+        val nombreTipo = when (plan) {
+            "MENSUAL" -> "Licencia Comercial Mensual (30 días)"
+            "SEMESTRAL" -> "Licencia Comercial Semestral (6 meses)"
+            "ANUAL" -> "Licencia Comercial Anual (1 año)"
+            else -> "Licencia Comercial Vitalicia (Pro Offline Permanente)"
         }
 
         viewModelScope.launch {
             val configActual = configuracion.value
             val configActualizada = configActual.copy(
-                claveLicencia = claveLimpia,
-                titularLicencia = titularLimpio.ifBlank { configActual.titularLicencia },
+                claveLicencia = "99 00",
+                titularLicencia = titularLimpio,
+                planLicencia = plan,
+                tipoLicencia = nombreTipo,
                 estadoLicencia = "ACTIVA",
-                fechaActivacion = System.currentTimeMillis()
+                fechaActivacion = ahora,
+                fechaVencimientoLicencia = fechaVencimiento
             )
             repository.saveConfiguracion(configActualizada)
-            onResultado(true, "¡Licencia activada con éxito para $titularLimpio!")
+            onResultado(true, "¡$nombreTipo activada con éxito para $titularLimpio!")
         }
+    }
+
+    // Compatibilidad anterior si se llama sin plan
+    fun activarLicencia(clave: String, titular: String, onResultado: (Boolean, String) -> Unit) {
+        activarLicenciaPlan(clave, "VITALICIA", titular, onResultado)
     }
 }
 

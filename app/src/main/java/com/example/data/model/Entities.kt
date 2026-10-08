@@ -70,11 +70,16 @@ data class ConfiguracionComercio(
     val telefono: String = "",
     val direccion: String = "",
     val mensajeCobro: String = "Hola, le saludamos de Angel's Cafe. Le recordamos cordialmente su saldo pendiente de %MONTO%. ¡Muchas gracias por su preferencia!",
-    val claveLicencia: String = "ANGEL-CAFE-PRO-2026",
+    val claveLicencia: String = "99 00",
     val titularLicencia: String = "Angel's Cafe & Restaurante",
     val tipoLicencia: String = "Licencia Comercial Vitalicia (Pro Offline)",
     val estadoLicencia: String = "ACTIVA",
-    val fechaActivacion: Long = 1775822400000L // 2026
+    val fechaActivacion: Long = 1775822400000L,
+    val planLicencia: String = "VITALICIA", // "MENSUAL", "SEMESTRAL", "ANUAL", "VITALICIA"
+    val fechaVencimientoLicencia: Long = 0L, // 0L significa vitalicia sin vencimiento
+    val tasaCambioBs: Double = 54.50, // Tasa de cambio oficial USD -> Bs (Bolívares)
+    val fechaActualizacionTasa: Long = System.currentTimeMillis(),
+    val autoActualizarTasa: Boolean = true
 )
 
 @Entity(tableName = "inventario")

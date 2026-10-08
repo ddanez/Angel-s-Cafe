@@ -89,6 +89,12 @@ fun CxcScreen(
                     fontWeight = FontWeight.ExtraBold,
                     color = SoftRed
                 )
+                Text(
+                    text = "Equivalente: ${FormatUtils.formatBs(totalCxC, config.tasaCambioBs)}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CafeDarkBrown
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${deudores.size} clientes con saldo pendiente de pago",
@@ -169,6 +175,7 @@ fun CxcScreen(
                         DeudorCxcCard(
                             item = item,
                             moneda = config.monedaSimbolo,
+                            tasaCambioBs = config.tasaCambioBs,
                             mensajePlantilla = config.mensajeCobro,
                             onRegistrarAbono = { clienteParaAbono = item },
                             onCobrarWhatsApp = { phone, msg ->
@@ -219,12 +226,20 @@ fun CxcScreen(
                                     Text(abono.detalle, fontSize = 12.sp, color = SoftGray)
                                     Text(FormatUtils.formatDate(abono.fecha), fontSize = 10.sp, color = SoftGray)
                                 }
-                                Text(
-                                    text = "+ ${FormatUtils.formatCurrency(abono.montoTotal, config.monedaSimbolo)}",
-                                    color = SoftGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "+ ${FormatUtils.formatCurrency(abono.montoTotal, config.monedaSimbolo)}",
+                                        color = SoftGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = FormatUtils.formatBs(abono.montoTotal, config.tasaCambioBs),
+                                        color = SoftGreen.copy(alpha = 0.85f),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -252,6 +267,7 @@ fun CxcScreen(
 private fun DeudorCxcCard(
     item: ClienteConSaldo,
     moneda: String,
+    tasaCambioBs: Double,
     mensajePlantilla: String,
     onRegistrarAbono: () -> Unit,
     onCobrarWhatsApp: (String, String) -> Unit,
@@ -288,6 +304,12 @@ private fun DeudorCxcCard(
                         fontWeight = FontWeight.ExtraBold,
                         color = SoftRed
                     )
+                    Text(
+                        text = FormatUtils.formatBs(item.saldoPendiente, tasaCambioBs),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SoftRed
+                    )
                 }
             }
 
@@ -304,7 +326,8 @@ private fun DeudorCxcCard(
                     if (cli.telefono.isNotBlank()) {
                         FilledTonalButton(
                             onClick = {
-                                val msg = mensajePlantilla.replace("%MONTO%", FormatUtils.formatCurrency(item.saldoPendiente, moneda))
+                                val montoDual = "${FormatUtils.formatCurrency(item.saldoPendiente, moneda)} (${FormatUtils.formatBs(item.saldoPendiente, tasaCambioBs)})"
+                                val msg = mensajePlantilla.replace("%MONTO%", montoDual)
                                 onCobrarWhatsApp(cli.telefono, msg)
                             },
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),

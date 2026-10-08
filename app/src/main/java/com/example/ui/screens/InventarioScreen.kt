@@ -234,13 +234,19 @@ fun InventarioScreen(
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text("Valorización Stock", fontSize = 11.sp, color = SoftGray, fontWeight = FontWeight.Medium)
                             Spacer(modifier = Modifier.height(4.dp))
+                            val totalValor = valorTotalMP + valorTotalPT
                             Text(
-                                FormatUtils.formatCurrency(valorTotalMP + valorTotalPT, config.monedaSimbolo),
-                                fontSize = 15.sp,
+                                FormatUtils.formatCurrency(totalValor, config.monedaSimbolo),
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text("Al costo de almacén", fontSize = 10.sp, color = SoftGray)
+                            Text(
+                                FormatUtils.formatBs(totalValor, config.tasaCambioBs),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CafeDarkBrown
+                            )
                         }
                     }
                 }
@@ -450,6 +456,7 @@ fun InventarioScreen(
                         ArticuloDualCard(
                             articulo = articulo,
                             monedaSimbolo = config.monedaSimbolo,
+                            tasaCambioBs = config.tasaCambioBs,
                             ingredientesReceta = ingredientesProducto,
                             onAjustarStock = { articleForMovement = articulo },
                             onEditar = { articleToEdit = articulo },
@@ -637,6 +644,7 @@ fun InventarioScreen(
 fun ArticuloDualCard(
     articulo: ArticuloInventario,
     monedaSimbolo: String,
+    tasaCambioBs: Double,
     ingredientesReceta: List<RecetaIngrediente>,
     onAjustarStock: () -> Unit,
     onEditar: () -> Unit,
@@ -789,12 +797,19 @@ fun ArticuloDualCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
+                    val montoPrincipal = if (isProductoTerminado) articulo.precioVenta else articulo.costoUnitario
                     Text(if (isProductoTerminado) "Precio Venta" else "Costo Unit.", fontSize = 10.sp, color = SoftGray)
                     Text(
-                        FormatUtils.formatCurrency(if (isProductoTerminado) articulo.precioVenta else articulo.costoUnitario, monedaSimbolo),
+                        FormatUtils.formatCurrency(montoPrincipal, monedaSimbolo),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isProductoTerminado) SoftGreen else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        FormatUtils.formatBs(montoPrincipal, tasaCambioBs),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CafeDarkBrown
                     )
                 }
                 Column {
@@ -807,12 +822,19 @@ fun ArticuloDualCard(
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
+                    val valorAlmacen = articulo.stockActual * articulo.costoUnitario
                     Text("Valor en Almacén", fontSize = 10.sp, color = SoftGray)
                     Text(
-                        FormatUtils.formatCurrency(articulo.stockActual * articulo.costoUnitario, monedaSimbolo),
+                        FormatUtils.formatCurrency(valorAlmacen, monedaSimbolo),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = CafeDarkBrown
+                    )
+                    Text(
+                        FormatUtils.formatBs(valorAlmacen, tasaCambioBs),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SoftGray
                     )
                 }
             }

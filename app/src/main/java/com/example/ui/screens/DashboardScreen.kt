@@ -134,6 +134,12 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SmoothBeige
                             )
+                            Text(
+                                FormatUtils.formatBs(ventasHoy, config.tasaCambioBs),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = GoldenCrema
+                            )
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Cobrado Hoy", style = MaterialTheme.typography.labelMedium, color = SoftGray)
@@ -143,8 +149,57 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SoftGreen
                             )
+                            Text(
+                                FormatUtils.formatBs(recaudadoHoy, config.tasaCambioBs),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = SoftGreen.copy(alpha = 0.9f)
+                            )
                         }
                     }
+                }
+            }
+        }
+
+        // Tasa del Día Oficial Banner
+        item {
+            Card(
+                onClick = { onNavigateToModule(AppModule.AJUSTES) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(14.dp),
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier.fillMaxWidth().testTag("dashboard_tasa_banner")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("💵", fontSize = 24.sp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Tasa Oficial: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (config.autoActualizarTasa) "Actualización diaria automática activa • Toca para ajustar" else "Tasa manual fijada • Toca para ajustar",
+                                fontSize = 10.sp,
+                                color = SoftGray
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Cambiar",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CafeDarkBrown
+                    )
                 }
             }
         }
@@ -244,6 +299,12 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        Text(
+                            text = FormatUtils.formatBs(totalCxC, config.tasaCambioBs),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SoftRed
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "${clientes.count { it.saldoPendiente > 0 }} clientes con deuda",
@@ -278,6 +339,12 @@ fun DashboardScreen(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = FormatUtils.formatBs(totalCxp, config.tasaCambioBs),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SoftRed
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

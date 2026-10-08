@@ -58,6 +58,17 @@ fun AjustesScreen(
     var showLicenciaDialog by remember { mutableStateOf(false) }
     var showHardResetDialog by remember { mutableStateOf(false) }
     var showHardResetSuccessDialog by remember { mutableStateOf(false) }
+    var showEditarTasaDialog by remember { mutableStateOf(false) }
+
+    val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
+    val mensajeTasa by viewModel.mensajeTasa.collectAsState()
+
+    LaunchedEffect(mensajeTasa) {
+        mensajeTasa?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.limpiarMensajeTasa()
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -165,6 +176,124 @@ fun AjustesScreen(
             }
         }
 
+        // Section: TASA DE CAMBIO (USD & BOLÍVARES)
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth().testTag("card_tasa_cambio")
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("💵", fontSize = 22.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Tasa de Cambio Oficial (USD / Bs)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Todos los precios del sistema se calculan en Dólares ($) y Bolívares (Bs.)",
+                                    fontSize = 11.sp,
+                                    color = SoftGray
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Tasa actual de conversión:", fontSize = 11.sp, color = SoftGray)
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = "1 USD = ",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}",
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = CafeDarkBrown
+                                    )
+                                }
+                                Text(
+                                    text = "Última actualización: ${FormatUtils.formatDate(config.fechaActualizacionTasa)}",
+                                    fontSize = 10.sp,
+                                    color = SoftGray
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(
+                                    onClick = { showEditarTasaDialog = true },
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Manual", fontSize = 12.sp)
+                                }
+
+                                Button(
+                                    onClick = { viewModel.actualizarTasaDesdeInternet(forzar = true) },
+                                    enabled = !actualizandoTasa,
+                                    colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    if (actualizandoTasa) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = SmoothBeige, strokeWidth = 2.dp)
+                                    } else {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Actualizar", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.toggleAutoActualizarTasa(!config.autoActualizarTasa) },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Switch(
+                            checked = config.autoActualizarTasa,
+                            onCheckedChange = { viewModel.toggleAutoActualizarTasa(it) },
+                            colors = SwitchDefaults.colors(checkedThumbColor = CafeDarkBrown)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("Actualización Diaria Automática", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Sincroniza la tasa automáticamente todos los días mediante el servicio oficial en línea.", fontSize = 11.sp, color = SoftGray)
+                        }
+                    }
+                }
+            }
+        }
+
         // Section: Menu & Products Management
         item {
             Row(
@@ -174,7 +303,7 @@ fun AjustesScreen(
             ) {
                 Column {
                     Text("Catálogo de Platos y Menú", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("${platos.size} platos registrados para la venta", fontSize = 12.sp, color = SoftGray)
+                    Text("${platos.size} platos registrados para la venta (con doble precio USD/Bs)", fontSize = 12.sp, color = SoftGray)
                 }
                 Button(
                     onClick = { showAddPlatoDialog = true },
@@ -206,7 +335,7 @@ fun AjustesScreen(
                             Text(plato.descripcion, fontSize = 12.sp, color = SoftGray, maxLines = 1)
                         }
                         Text(
-                            FormatUtils.formatCurrency(plato.precio, config.monedaSimbolo),
+                            text = FormatUtils.formatDual(plato.precio, config.tasaCambioBs, config.monedaSimbolo),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = CafeBrown
@@ -285,6 +414,38 @@ fun AjustesScreen(
                             ) {
                                 Text("Tipo:", fontSize = 12.sp, color = SoftGray)
                                 Text(config.tipoLicencia, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CafeDarkBrown)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Modalidad / Plan:", fontSize = 12.sp, color = SoftGray)
+                                Surface(
+                                    color = GoldenCrema.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = config.planLicencia,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CafeDarkBrown,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            if (config.fechaVencimientoLicencia > 0) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Vencimiento:", fontSize = 12.sp, color = SoftGray)
+                                    Text(
+                                        FormatUtils.formatDateOnly(config.fechaVencimientoLicencia),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (System.currentTimeMillis() > config.fechaVencimientoLicencia) SoftRed else CafeBrown
+                                    )
+                                }
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -461,11 +622,23 @@ fun AjustesScreen(
         LicenciaDialog(
             configActual = config,
             onDismiss = { showLicenciaDialog = false },
-            onActivar = { clave, titular ->
-                viewModel.activarLicencia(clave, titular) { exito, msg ->
+            onActivar = { clave, plan, titular ->
+                viewModel.activarLicenciaPlan(clave, plan, titular) { exito, msg ->
                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                     if (exito) showLicenciaDialog = false
                 }
+            }
+        )
+    }
+
+    // --- DIÁLOGO DE MODIFICACIÓN MANUAL DE TASA DE CAMBIO ---
+    if (showEditarTasaDialog) {
+        EditarTasaDialog(
+            tasaActual = config.tasaCambioBs,
+            onDismiss = { showEditarTasaDialog = false },
+            onConfirm = { nuevaTasa ->
+                viewModel.actualizarTasaCambioManual(nuevaTasa)
+                showEditarTasaDialog = false
             }
         )
     }
@@ -508,20 +681,22 @@ fun AjustesScreen(
     }
 }
 
-// DIALOG: ACTIVACIÓN / GESTIÓN DE LICENCIA
+// DIALOG: ACTIVACIÓN / GESTIÓN DE LICENCIA (1 Mes, Semestral, Anual o Vitalicio con clave 99 00)
 @Composable
 private fun LicenciaDialog(
     configActual: ConfiguracionComercio,
     onDismiss: () -> Unit,
-    onActivar: (clave: String, titular: String) -> Unit
+    onActivar: (clave: String, plan: String, titular: String) -> Unit
 ) {
-    var claveInput by remember { mutableStateOf(configActual.claveLicencia) }
+    var claveInput by remember { mutableStateOf("99 00") }
     var titularInput by remember { mutableStateOf(configActual.titularLicencia) }
+    var selectedPlan by remember { mutableStateOf(configActual.planLicencia.ifBlank { "VITALICIA" }) }
 
-    val clavesSugeridas = listOf(
-        "ANGEL-CAFE-PRO-2026",
-        "SAZON-REST-UNLIMITED",
-        "CAFE-PREMIUM-OFFLINE"
+    val planes = listOf(
+        Triple("MENSUAL", "1 Mes", "30 días de vigencia"),
+        Triple("SEMESTRAL", "Semestral", "6 meses (180 días)"),
+        Triple("ANUAL", "Anual", "1 año (365 días)"),
+        Triple("VITALICIA", "Vitalicio", "Acceso permanente sin caducidad")
     )
 
     AlertDialog(
@@ -530,61 +705,169 @@ private fun LicenciaDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🛡️", fontSize = 22.sp)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Activar Licencia Comercial", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Licenciamiento del Sistema", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text(
+                        "Selecciona el período de licenciamiento comercial deseado. Para autorizar la activación debe ingresar la clave maestra del sistema (99 00).",
+                        fontSize = 12.sp,
+                        color = SoftGray
+                    )
+                }
+
+                item {
+                    Text("Período de Licencia:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CafeDarkBrown)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        planes.forEach { (id, label, desc) ->
+                            val isSelected = selectedPlan == id
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) CafeBrown.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, CafeDarkBrown) else null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedPlan = id }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { selectedPlan = id },
+                                        colors = RadioButtonDefaults.colors(selectedColor = CafeDarkBrown)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column {
+                                        Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Text(desc, fontSize = 11.sp, color = SoftGray)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = titularInput,
+                        onValueChange = { titularInput = it },
+                        label = { Text("Titular del Negocio / Razón Social *") },
+                        placeholder = { Text("Ej: Angel's Cafe C.A.") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("licencia_titular_input")
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = claveInput,
+                        onValueChange = { claveInput = it },
+                        label = { Text("Clave Maestra de Licenciamiento (99 00) *") },
+                        placeholder = { Text("99 00") },
+                        singleLine = true,
+                        supportingText = { Text("Clave requerida por el sistema: 99 00") },
+                        modifier = Modifier.fillMaxWidth().testTag("licencia_clave_input")
+                    )
+                }
+
+                item {
+                    Surface(
+                        color = SoftGreen.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("✓", fontSize = 14.sp, color = SoftGreen, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Funcionamiento 100% Offline garantizado durante la vigencia de la licencia.",
+                                fontSize = 11.sp,
+                                color = SoftGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onActivar(claveInput, selectedPlan, titularInput) },
+                enabled = claveInput.isNotBlank() && titularInput.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                modifier = Modifier.testTag("licencia_confirm_button")
+            ) {
+                Text("Activar Licencia ($selectedPlan)")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+// DIALOG: AJUSTE MANUAL DE LA TASA DE CAMBIO
+@Composable
+private fun EditarTasaDialog(
+    tasaActual: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double) -> Unit
+) {
+    var tasaInput by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", tasaActual)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("💵", fontSize = 22.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Fijar Tasa de Cambio Manual", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Introduce tu serial o clave de activación comercial. Al validarse, el sistema quedará licenciado permanentemente para tu negocio sin caducidad.",
+                    "Ingresa el valor en Bolívares (Bs.) por cada 1 USD. Todos los módulos, tickets, inventarios y reportes recalcularán automáticamente sus equivalencias.",
                     fontSize = 12.sp,
                     color = SoftGray
                 )
 
                 OutlinedTextField(
-                    value = titularInput,
-                    onValueChange = { titularInput = it },
-                    label = { Text("Nombre del Titular o Razón Social *") },
-                    placeholder = { Text("Ej: Angel's Cafe C.A.") },
+                    value = tasaInput,
+                    onValueChange = { tasaInput = it },
+                    label = { Text("Tasa de Cambio (Bs. por 1 USD) *") },
+                    placeholder = { Text("Ej: 54.50") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("licencia_titular_input")
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth().testTag("tasa_cambio_manual_input")
                 )
 
-                OutlinedTextField(
-                    value = claveInput,
-                    onValueChange = { claveInput = it },
-                    label = { Text("Serial o Clave de Licencia *") },
-                    placeholder = { Text("XXXX-XXXX-XXXX-XXXX") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("licencia_clave_input")
+                Text(
+                    "Ejemplos rápidos:",
+                    fontSize = 11.sp,
+                    color = SoftGray
                 )
-
-                Text("Claves de activación rápida disponibles:", fontSize = 11.sp, color = SoftGray)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    clavesSugeridas.forEach { k ->
+                    listOf(45.0, 50.0, 54.5, 60.0).forEach { r ->
                         SuggestionChip(
-                            onClick = { claveInput = k },
-                            label = { Text(k.take(12) + "...", fontSize = 10.sp) }
-                        )
-                    }
-                }
-
-                Surface(
-                    color = SoftGreen.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("✓", fontSize = 14.sp, color = SoftGreen, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Modalidad 100% Offline: No requiere internet continuo para validar su funcionamiento.",
-                            fontSize = 11.sp,
-                            color = SoftGreen,
-                            fontWeight = FontWeight.SemiBold
+                            onClick = { tasaInput = String.format(java.util.Locale.US, "%.2f", r) },
+                            label = { Text("Bs. $r", fontSize = 11.sp) }
                         )
                     }
                 }
@@ -592,12 +875,16 @@ private fun LicenciaDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onActivar(claveInput, titularInput) },
-                enabled = claveInput.isNotBlank() && titularInput.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
-                modifier = Modifier.testTag("licencia_confirm_button")
+                onClick = {
+                    val rate = tasaInput.replace(",", ".").toDoubleOrNull()
+                    if (rate != null && rate > 0) {
+                        onConfirm(rate)
+                    }
+                },
+                enabled = (tasaInput.replace(",", ".").toDoubleOrNull() ?: 0.0) > 0,
+                colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown)
             ) {
-                Text("Activar Licencia")
+                Text("Guardar Tasa")
             }
         },
         dismissButton = {

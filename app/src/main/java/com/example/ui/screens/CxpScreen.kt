@@ -81,6 +81,12 @@ fun CxpScreen(
                     fontWeight = FontWeight.ExtraBold,
                     color = SoftRed
                 )
+                Text(
+                    text = "Equivalente: ${FormatUtils.formatBs(totalCxp, config.tasaCambioBs)}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CafeDarkBrown
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${provDeudores.size} proveedores pendientes de pago",
@@ -189,6 +195,12 @@ fun CxpScreen(
                                             fontWeight = FontWeight.ExtraBold,
                                             color = SoftRed
                                         )
+                                        Text(
+                                            text = FormatUtils.formatBs(item.saldoPendienteCXP, config.tasaCambioBs),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SoftRed
+                                        )
                                     }
                                 }
 
@@ -198,12 +210,12 @@ fun CxpScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "Compras a crédito: ${FormatUtils.formatCurrency(item.totalComprasCredito, config.monedaSimbolo)}",
+                                        text = "Crédito: ${FormatUtils.formatCurrency(item.totalComprasCredito, config.monedaSimbolo)}",
                                         fontSize = 11.sp,
                                         color = SoftGray
                                     )
                                     Text(
-                                        text = "Pagado: ${FormatUtils.formatCurrency(item.totalPagos, config.monedaSimbolo)}",
+                                        text = "Pagado: ${FormatUtils.formatDual(item.totalPagos, config.tasaCambioBs, config.monedaSimbolo)}",
                                         fontSize = 11.sp,
                                         color = SoftGreen
                                     )
@@ -263,12 +275,20 @@ fun CxpScreen(
                                     Text(FormatUtils.formatDate(pago.fecha), fontSize = 10.sp, color = SoftGray)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = FormatUtils.formatCurrency(pago.monto, config.monedaSimbolo),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = SoftGreen
-                                    )
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = FormatUtils.formatCurrency(pago.monto, config.monedaSimbolo),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = SoftGreen
+                                        )
+                                        Text(
+                                            text = FormatUtils.formatBs(pago.monto, config.tasaCambioBs),
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 11.sp,
+                                            color = SoftGreen.copy(alpha = 0.85f)
+                                        )
+                                    }
                                     IconButton(onClick = { viewModel.borrarPagoProveedor(pago) }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = SoftRed, modifier = Modifier.size(18.dp))
                                     }

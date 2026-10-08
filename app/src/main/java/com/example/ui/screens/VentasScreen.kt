@@ -78,8 +78,8 @@ fun VentasScreen(
                                 color = SoftGray
                             )
                             Text(
-                                text = FormatUtils.formatCurrency(totalCarrito, config.monedaSimbolo),
-                                fontSize = 20.sp,
+                                text = FormatUtils.formatDual(totalCarrito, config.tasaCambioBs, config.monedaSimbolo),
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -196,7 +196,7 @@ fun VentasScreen(
                                         )
                                     }
                                     Text(
-                                        text = FormatUtils.formatCurrency(plato.precio, config.monedaSimbolo),
+                                        text = FormatUtils.formatDual(plato.precio, config.tasaCambioBs, config.monedaSimbolo),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = CafeBrown
@@ -232,21 +232,27 @@ fun VentasScreen(
         CheckoutVentaDialog(
             listaClientes = clientes.map { it.cliente },
             total = totalCarrito,
+            tasaCambioBs = config.tasaCambioBs,
             moneda = config.monedaSimbolo,
             onDismiss = { showCheckoutDialog = false },
             onConfirm = { esCredito, clienteId, clienteNombre, nota ->
-                val resumenItems = carrito.entries.joinToString("\n") { "• ${it.value}x ${it.key.nombre} - ${FormatUtils.formatCurrency(it.key.precio * it.value, config.monedaSimbolo)}" }
+                val resumenItems = carrito.entries.joinToString("\n") {
+                    val subtotal = it.key.precio * it.value
+                    "• ${it.value}x ${it.key.nombre} - ${FormatUtils.formatDual(subtotal, config.tasaCambioBs, config.monedaSimbolo)}"
+                }
                 val ticket = """
 🧾 ${config.nombreComercio}
-Comprobante de Venta
+Comprobante de Venta (Doble Moneda)
 ----------------------------------
 Cliente: ${if (esCredito) clienteNombre else "Mostrador / Contado"}
 Condición: ${if (esCredito) "Crédito (CXC)" else "Contado"}
-${if (nota.isNotBlank()) "Mesa/Nota: $nota\n" else ""}
+${if (nota.isNotBlank()) "Mesa/Nota: $nota\n" else ""}Tasa del Día: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}
+----------------------------------
 Detalle:
 $resumenItems
 ----------------------------------
-TOTAL: ${FormatUtils.formatCurrency(totalCarrito, config.monedaSimbolo)}
+TOTAL EN DÓLARES: ${FormatUtils.formatCurrency(totalCarrito, config.monedaSimbolo)}
+TOTAL EN BOLÍVARES: ${FormatUtils.formatBs(totalCarrito, config.tasaCambioBs)}
 ¡Gracias por su compra! ☕
                 """.trimIndent()
 
@@ -303,6 +309,7 @@ TOTAL: ${FormatUtils.formatCurrency(totalCarrito, config.monedaSimbolo)}
 private fun CheckoutVentaDialog(
     listaClientes: List<Cliente>,
     total: Double,
+    tasaCambioBs: Double,
     moneda: String,
     onDismiss: () -> Unit,
     onConfirm: (esCredito: Boolean, clienteId: Int, clienteNombre: String, nota: String) -> Unit
@@ -317,12 +324,36 @@ private fun CheckoutVentaDialog(
         title = { Text("Finalizar Venta") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Total a Cobrar: ${FormatUtils.formatCurrency(total, moneda)}",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Total a Cobrar:",
+                            fontSize = 11.sp,
+                            color = SoftGray
+                        )
+                        Text(
+                            text = FormatUtils.formatCurrency(total, moneda),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Equivalente en Bolívares: ${FormatUtils.formatBs(total, tasaCambioBs)}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CafeDarkBrown
+                        )
+                        Text(
+                            text = "(Tasa: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", tasaCambioBs)})",
+                            fontSize = 10.sp,
+                            color = SoftGray
+                        )
+                    }
+                }
 
                 Text("Método de Facturación:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Row(

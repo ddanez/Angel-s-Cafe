@@ -1036,7 +1036,9 @@ fun ArticuloFormDialog(
         text = {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp)
             ) {
                 // Selector de Tipo de Inventario (Materia Prima vs Producto Terminado)
                 item {
@@ -1440,7 +1442,9 @@ fun RecetaConfigDialog(
         },
         text = {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item {
@@ -1644,7 +1648,9 @@ fun ElaborarProductoDialog(
         },
         text = {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {

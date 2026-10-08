@@ -217,6 +217,30 @@ class SazonRepository(
         return null // Éxito
     }
 
+    // --- HARD RESET DEL SISTEMA ---
+    suspend fun hardResetDatabase(reinicializarDatosEjemplo: Boolean = true) {
+        // 1. Borrar todas las tablas
+        recetaIngredienteDao.deleteAll()
+        movimientoInventarioDao.deleteAll()
+        inventarioDao.deleteAll()
+        pagoProveedorDao.deleteAll()
+        compraDao.deleteAll()
+        transaccionDao.deleteAll()
+        proveedorDao.deleteAll()
+        platoDao.deleteAll()
+        clienteDao.deleteAll()
+        configuracionDao.deleteAll()
+
+        // 2. Restaurar configuración predeterminada
+        val configDefault = ConfiguracionComercio()
+        configuracionDao.insertOrUpdate(configDefault)
+
+        // 3. Si se solicita, cargar datos de demostración limpios
+        if (reinicializarDatosEjemplo) {
+            seedInitialDataIfNeeded()
+        }
+    }
+
     suspend fun seedInitialDataIfNeeded() {
         if (platoDao.getCount() == 0) {
             val samplePlatos = listOf(

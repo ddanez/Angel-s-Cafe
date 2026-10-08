@@ -69,7 +69,12 @@ data class ConfiguracionComercio(
     val monedaSimbolo: String = "$",
     val telefono: String = "",
     val direccion: String = "",
-    val mensajeCobro: String = "Hola, le saludamos de Angel's Cafe. Le recordamos cordialmente su saldo pendiente de %MONTO%. ¡Muchas gracias por su preferencia!"
+    val mensajeCobro: String = "Hola, le saludamos de Angel's Cafe. Le recordamos cordialmente su saldo pendiente de %MONTO%. ¡Muchas gracias por su preferencia!",
+    val claveLicencia: String = "ANGEL-CAFE-PRO-2026",
+    val titularLicencia: String = "Angel's Cafe & Restaurante",
+    val tipoLicencia: String = "Licencia Comercial Vitalicia (Pro Offline)",
+    val estadoLicencia: String = "ACTIVA",
+    val fechaActivacion: Long = 1775822400000L // 2026
 )
 
 @Entity(tableName = "inventario")

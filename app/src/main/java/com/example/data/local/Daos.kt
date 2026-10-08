@@ -20,6 +20,9 @@ interface ClienteDao {
 
     @Query("SELECT * FROM clientes WHERE id = :id")
     suspend fun getClienteById(id: Int): Cliente?
+
+    @Query("DELETE FROM clientes")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -41,6 +44,9 @@ interface PlatoDao {
 
     @Query("SELECT COUNT(*) FROM platos")
     suspend fun getCount(): Int
+
+    @Query("DELETE FROM platos")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -56,6 +62,9 @@ interface TransaccionDao {
 
     @Delete
     suspend fun deleteTransaccion(transaccion: Transaccion)
+
+    @Query("DELETE FROM transacciones")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -74,6 +83,9 @@ interface ProveedorDao {
 
     @Query("SELECT COUNT(*) FROM proveedores")
     suspend fun getCount(): Int
+
+    @Query("DELETE FROM proveedores")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -89,6 +101,9 @@ interface CompraDao {
 
     @Delete
     suspend fun deleteCompra(compra: Compra)
+
+    @Query("DELETE FROM compras")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -104,6 +119,9 @@ interface PagoProveedorDao {
 
     @Delete
     suspend fun deletePagoProveedor(pago: PagoProveedor)
+
+    @Query("DELETE FROM pagos_proveedor")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -113,6 +131,9 @@ interface ConfiguracionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(config: ConfiguracionComercio)
+
+    @Query("DELETE FROM configuracion")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -140,6 +161,9 @@ interface InventarioDao {
 
     @Query("SELECT COUNT(*) FROM inventario")
     suspend fun getCount(): Int
+
+    @Query("DELETE FROM inventario")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -155,6 +179,9 @@ interface MovimientoInventarioDao {
 
     @Delete
     suspend fun deleteMovimiento(movimiento: MovimientoInventario)
+
+    @Query("DELETE FROM movimientos_inventario")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -182,6 +209,9 @@ interface RecetaIngredienteDao {
 
     @Query("SELECT COUNT(*) FROM recetas_ingredientes")
     suspend fun getCount(): Int
+
+    @Query("DELETE FROM recetas_ingredientes")
+    suspend fun deleteAll()
 }
 
 

@@ -438,6 +438,40 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
             onResultado(res)
         }
     }
+
+    // --- HARD RESET ---
+    fun ejecutarHardReset(reinicializarDatosEjemplo: Boolean, onCompletado: () -> Unit) {
+        viewModelScope.launch {
+            _selectedClienteId.value = null
+            limpiarCarrito()
+            repository.hardResetDatabase(reinicializarDatosEjemplo)
+            onCompletado()
+        }
+    }
+
+    // --- LICENCIAMIENTO ---
+    fun activarLicencia(clave: String, titular: String, onResultado: (Boolean, String) -> Unit) {
+        val claveLimpia = clave.trim().uppercase()
+        val titularLimpio = titular.trim()
+
+        if (claveLimpia.length < 8) {
+            onResultado(false, "La clave de licencia debe tener al menos 8 caracteres.")
+            return
+        }
+
+        viewModelScope.launch {
+            val configActual = configuracion.value
+            val configActualizada = configActual.copy(
+                claveLicencia = claveLimpia,
+                titularLicencia = titularLimpio.ifBlank { configActual.titularLicencia },
+                estadoLicencia = "ACTIVA",
+                fechaActivacion = System.currentTimeMillis()
+            )
+            repository.saveConfiguracion(configActualizada)
+            onResultado(true, "¡Licencia activada con éxito para $titularLimpio!")
+        }
+    }
 }
+
 
 

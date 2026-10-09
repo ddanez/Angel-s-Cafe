@@ -129,6 +129,12 @@ POSICIÓN DE CRÉDITO:
                         fontWeight = FontWeight.ExtraBold,
                         color = if (utilidadEstimada >= 0) GoldenCrema else LightText
                     )
+                    Text(
+                        text = "Equivalente: ${FormatUtils.formatBs(utilidadEstimada, config.tasaCambioBs)}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (utilidadEstimada >= 0) SmoothBeige else LightText.copy(alpha = 0.9f)
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -137,10 +143,12 @@ POSICIÓN DE CRÉDITO:
                         Column {
                             Text("Ingresos Reales:", fontSize = 11.sp, color = SoftGray)
                             Text(FormatUtils.formatCurrency(totalIngresosEfectivos, config.monedaSimbolo), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SoftGreen)
+                            Text(FormatUtils.formatBs(totalIngresosEfectivos, config.tasaCambioBs), fontSize = 11.sp, color = SoftGreen)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("Egresos Reales:", fontSize = 11.sp, color = SoftGray)
                             Text(FormatUtils.formatCurrency(totalEgresosEfectivos, config.monedaSimbolo), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SoftRed)
+                            Text(FormatUtils.formatBs(totalEgresosEfectivos, config.tasaCambioBs), fontSize = 11.sp, color = SoftRed)
                         }
                     }
                 }
@@ -157,12 +165,12 @@ POSICIÓN DE CRÉDITO:
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ReportRowItem(label = "Ventas Mostrador / Contado", value = FormatUtils.formatCurrency(ventasContado, config.monedaSimbolo), color = SoftGreen)
-                    ReportRowItem(label = "Cobros de Deudas (Abonos)", value = FormatUtils.formatCurrency(cobrosAbonos, config.monedaSimbolo), color = SoftGreen)
-                    ReportRowItem(label = "Ventas a Crédito otorgadas", value = FormatUtils.formatCurrency(ventasCredito, config.monedaSimbolo), color = CafeBrown)
+                    ReportRowItem(label = "Ventas Mostrador / Contado", value = FormatUtils.formatDual(ventasContado, config.tasaCambioBs, config.monedaSimbolo), color = SoftGreen)
+                    ReportRowItem(label = "Cobros de Deudas (Abonos)", value = FormatUtils.formatDual(cobrosAbonos, config.tasaCambioBs, config.monedaSimbolo), color = SoftGreen)
+                    ReportRowItem(label = "Ventas a Crédito otorgadas", value = FormatUtils.formatDual(ventasCredito, config.tasaCambioBs, config.monedaSimbolo), color = CafeBrown)
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
-                    ReportRowItem(label = "Compras de Insumos al Contado", value = FormatUtils.formatCurrency(comprasContado, config.monedaSimbolo), color = SoftRed)
-                    ReportRowItem(label = "Pagos Realizados a Proveedores", value = FormatUtils.formatCurrency(pagosAProveedores, config.monedaSimbolo), color = SoftRed)
+                    ReportRowItem(label = "Compras de Insumos al Contado", value = FormatUtils.formatDual(comprasContado, config.tasaCambioBs, config.monedaSimbolo), color = SoftRed)
+                    ReportRowItem(label = "Pagos Realizados a Proveedores", value = FormatUtils.formatDual(pagosAProveedores, config.tasaCambioBs, config.monedaSimbolo), color = SoftRed)
                 }
             }
         }
@@ -179,18 +187,18 @@ POSICIÓN DE CRÉDITO:
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ReportRowItem(
                         label = "Cuentas por Cobrar (A favor)",
-                        value = FormatUtils.formatCurrency(totalCxC, config.monedaSimbolo),
+                        value = FormatUtils.formatDual(totalCxC, config.tasaCambioBs, config.monedaSimbolo),
                         color = SoftGreen
                     )
                     ReportRowItem(
                         label = "Cuentas por Pagar (A proveedores)",
-                        value = FormatUtils.formatCurrency(totalCxp, config.monedaSimbolo),
+                        value = FormatUtils.formatDual(totalCxp, config.tasaCambioBs, config.monedaSimbolo),
                         color = SoftRed
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                     ReportRowItem(
                         label = "Posición Neta de Crédito",
-                        value = FormatUtils.formatCurrency(balanceCredito, config.monedaSimbolo),
+                        value = FormatUtils.formatDual(balanceCredito, config.tasaCambioBs, config.monedaSimbolo),
                         color = if (balanceCredito >= 0) SoftGreen else SoftRed,
                         isBold = true
                     )

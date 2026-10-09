@@ -92,13 +92,19 @@ fun ComprasScreen(
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Text(
+                        text = "Equivalente: ${FormatUtils.formatBs(totalCompras, config.tasaCambioBs)}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CafeDarkBrown
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Contado: ${FormatUtils.formatCurrency(totalContado, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftGreen)
-                        Text("Crédito (CXP): ${FormatUtils.formatCurrency(totalCredito, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftRed)
+                        Text("Contado: ${FormatUtils.formatDual(totalContado, config.tasaCambioBs, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftGreen)
+                        Text("Crédito (CXP): ${FormatUtils.formatDual(totalCredito, config.tasaCambioBs, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftRed)
                     }
                 }
             }
@@ -205,6 +211,12 @@ fun ComprasScreen(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = FormatUtils.formatBs(c.montoTotal, config.tasaCambioBs),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp,
+                                        color = CafeDarkBrown
                                     )
                                     IconButton(
                                         onClick = { compraToDelete = c },

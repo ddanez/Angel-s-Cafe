@@ -125,6 +125,12 @@ fun ClientesScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = SoftRed
                             )
+                            Text(
+                                text = FormatUtils.formatBs(totalCartera, config.tasaCambioBs),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SoftRed
+                            )
                         }
                     }
                 }
@@ -178,6 +184,7 @@ fun ClientesScreen(
                             ClienteCardItem(
                                 item = item,
                                 moneda = config.monedaSimbolo,
+                                tasaCambioBs = config.tasaCambioBs,
                                 onClick = { viewModel.selectCliente(item.cliente.id) },
                                 onCall = { tel ->
                                     if (tel.isNotBlank()) {
@@ -247,6 +254,7 @@ fun ClientesScreen(
 private fun ClienteCardItem(
     item: ClienteConSaldo,
     moneda: String,
+    tasaCambioBs: Double,
     onClick: () -> Unit,
     onCall: (String) -> Unit
 ) {
@@ -308,6 +316,14 @@ private fun ClienteCardItem(
                     fontSize = 15.sp,
                     color = if (tieneDeuda) SoftRed else SoftGreen
                 )
+                if (tieneDeuda) {
+                    Text(
+                        text = FormatUtils.formatBs(item.saldoPendiente, tasaCambioBs),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SoftRed
+                    )
+                }
                 Text(
                     text = if (tieneDeuda) "Deuda Pendiente" else "Al Día",
                     fontSize = 10.sp,

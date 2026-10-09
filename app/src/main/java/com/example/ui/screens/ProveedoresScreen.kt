@@ -97,6 +97,12 @@ fun ProveedoresScreen(
                             fontWeight = FontWeight.Bold,
                             color = SoftRed
                         )
+                        Text(
+                            text = FormatUtils.formatBs(totalCxp, config.tasaCambioBs),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SoftRed
+                        )
                     }
                 }
             }
@@ -150,6 +156,7 @@ fun ProveedoresScreen(
                         ProveedorItemCard(
                             item = item,
                             moneda = config.monedaSimbolo,
+                            tasaCambioBs = config.tasaCambioBs,
                             onEdit = { supplierToEdit = item.proveedor },
                             onDelete = { supplierToDelete = item.proveedor },
                             onCall = { tel ->
@@ -221,6 +228,7 @@ fun ProveedoresScreen(
 private fun ProveedorItemCard(
     item: ProveedorConSaldo,
     moneda: String,
+    tasaCambioBs: Double,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onCall: (String) -> Unit,
@@ -262,6 +270,12 @@ private fun ProveedorItemCard(
                             text = FormatUtils.formatCurrency(item.saldoPendienteCXP, moneda),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
+                            color = SoftRed
+                        )
+                        Text(
+                            text = FormatUtils.formatBs(item.saldoPendienteCXP, tasaCambioBs),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
                             color = SoftRed
                         )
                     }

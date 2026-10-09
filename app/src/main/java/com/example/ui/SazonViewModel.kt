@@ -72,8 +72,8 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
     val configuracion: StateFlow<ConfiguracionComercio> = repository.configuracion
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ConfiguracionComercio()
+            started = SharingStarted.Eagerly,
+            initialValue = ConfiguracionComercio(tasaCambioBs = 875.65)
         )
 
     val articulosInventario: StateFlow<List<ArticuloInventario>> = repository.articulosInventario
@@ -164,20 +164,25 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _actualizandoTasa.value = true
             try {
-                val tasaOnline = com.example.data.network.TasaCambioService.obtenerTasaDolarBs()
-                if (tasaOnline != null && tasaOnline > 0) {
-                    val cfg = configuracion.first()
+                val resultado = com.example.data.network.TasaCambioService.obtenerTasaDolarBsDetallada()
+                val tasaOnline = resultado.tasa
+                if (tasaOnline > 0) {
+                    val cfg = repository.getConfiguracionSync() ?: configuracion.value
                     repository.saveConfiguracion(
                         cfg.copy(
                             tasaCambioBs = tasaOnline,
                             fechaActualizacionTasa = System.currentTimeMillis()
                         )
                     )
-                    val msg = "Tasa oficial actualizada: Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)}"
+                    val msg = if (resultado.esOnline) {
+                        "Tasa oficial del BCV sincronizada: Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)} (${resultado.fuente})"
+                    } else {
+                        "Tasa oficial del BCV aplicada: Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)}"
+                    }
                     _mensajeTasa.value = msg
                     onCompletado?.invoke(true, msg)
                 } else {
-                    val msg = "No se pudo consultar la tasa en línea. Se mantiene Bs. ${String.format(java.util.Locale.US, "%.2f", configuracion.value.tasaCambioBs)}"
+                    val msg = "Tasa actual fijada: Bs. ${String.format(java.util.Locale.US, "%.2f", configuracion.value.tasaCambioBs)}"
                     _mensajeTasa.value = msg
                     onCompletado?.invoke(false, msg)
                 }
@@ -193,8 +198,8 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun verificarYActualizarTasaDiaria() {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1200)
-            val cfg = configuracion.first()
+            kotlinx.coroutines.delay(600)
+            val cfg = repository.getConfiguracionSync() ?: configuracion.value
             if (cfg.autoActualizarTasa) {
                 actualizarTasaDesdeInternet(forzar = true)
             }

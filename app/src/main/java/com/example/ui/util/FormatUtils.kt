@@ -21,7 +21,7 @@ object FormatUtils {
      * Formatea el equivalente en Bolívares usando la tasa de cambio
      */
     fun formatBs(amountUsd: Double, tasaCambioBs: Double): String {
-        val totalBs = amountUsd * if (tasaCambioBs > 0) tasaCambioBs else 54.50
+        val totalBs = amountUsd * if (tasaCambioBs > 0) tasaCambioBs else 875.65
         return "Bs. ${numberFormat.format(totalBs)}"
     }
 

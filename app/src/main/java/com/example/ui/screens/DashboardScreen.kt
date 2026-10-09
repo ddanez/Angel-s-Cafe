@@ -233,7 +233,7 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Tasa Oficial: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}",
+                                text = "Tasa Oficial BCV: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurface

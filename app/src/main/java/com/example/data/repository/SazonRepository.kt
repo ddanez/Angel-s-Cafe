@@ -120,6 +120,9 @@ class SazonRepository(
     suspend fun saveConfiguracion(config: ConfiguracionComercio) =
         configuracionDao.insertOrUpdate(config)
 
+    suspend fun getConfiguracionSync(): ConfiguracionComercio? =
+        configuracionDao.getConfiguracionSync()
+
     // --- INVENTARIO ---
     suspend fun addArticuloInventario(articulo: ArticuloInventario): Long =
         inventarioDao.insertArticulo(articulo)
@@ -246,18 +249,30 @@ class SazonRepository(
         if (configActual == null) {
             val nuevaConfig = ConfiguracionComercio()
             configuracionDao.insertOrUpdate(nuevaConfig)
-        } else if (!configActual.fueActivadaConClave && configActual.planLicencia != "DEMO") {
-            // Migrar a licencia Demo de 15 días si no fue activada con clave maestra
-            val configDemo = configActual.copy(
-                planLicencia = "DEMO",
-                tipoLicencia = "Licencia de Prueba Demo (15 días)",
-                estadoLicencia = "DEMO",
-                fechaActivacion = System.currentTimeMillis(),
-                fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
-                fueActivadaConClave = false,
-                claveLicencia = ""
-            )
-            configuracionDao.insertOrUpdate(configDemo)
+        } else {
+            var configModificada = configActual
+            // Si la tasa almacenada es la anterior obsoleta (menor a 500 Bs), migrar de inmediato a la tasa oficial real del BCV
+            if (configActual.tasaCambioBs < 500.0) {
+                configModificada = configModificada.copy(
+                    tasaCambioBs = 875.65,
+                    fechaActualizacionTasa = System.currentTimeMillis()
+                )
+            }
+            if (!configActual.fueActivadaConClave && configActual.planLicencia != "DEMO") {
+                // Migrar a licencia Demo de 15 días si no fue activada con clave maestra
+                configModificada = configModificada.copy(
+                    planLicencia = "DEMO",
+                    tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                    estadoLicencia = "DEMO",
+                    fechaActivacion = System.currentTimeMillis(),
+                    fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                    fueActivadaConClave = false,
+                    claveLicencia = ""
+                )
+            }
+            if (configModificada != configActual) {
+                configuracionDao.insertOrUpdate(configModificada)
+            }
         }
 
         if (platoDao.getCount() == 0) {

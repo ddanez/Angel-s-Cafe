@@ -78,7 +78,7 @@ data class ConfiguracionComercio(
     val planLicencia: String = "DEMO", // "DEMO", "MENSUAL", "SEMESTRAL", "ANUAL", "VITALICIA"
     val fechaVencimientoLicencia: Long = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L), // 15 días exactos de prueba inicial
     val fueActivadaConClave: Boolean = false,
-    val tasaCambioBs: Double = 54.50, // Tasa de cambio oficial USD -> Bs (Bolívares)
+    val tasaCambioBs: Double = 875.65, // Tasa de cambio oficial USD -> Bs (Banco Central de Venezuela BCV)
     val fechaActualizacionTasa: Long = System.currentTimeMillis(),
     val autoActualizarTasa: Boolean = true
 ) {

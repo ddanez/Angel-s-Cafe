@@ -65,11 +65,12 @@ fun AjustesScreen(
 
     val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
     val mensajeTasa by viewModel.mensajeTasa.collectAsState()
+    var bannerMensajeTasa by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(mensajeTasa) {
         mensajeTasa?.let {
+            bannerMensajeTasa = it
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            viewModel.limpiarMensajeTasa()
         }
     }
 
@@ -197,16 +198,62 @@ fun AjustesScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = "Tasa de Cambio Oficial (USD / Bs)",
+                                    text = "Tasa Oficial BCV (USD / Bs)",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Todos los precios del sistema se calculan en Dólares ($) y Bolívares (Bs.)",
+                                    text = "Banco Central de Venezuela • Conversión automática dual en todos los módulos",
                                     fontSize = 11.sp,
                                     color = SoftGray
                                 )
+                            }
+                        }
+                    }
+
+                    if (bannerMensajeTasa != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = CafeDarkBrown,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = bannerMensajeTasa ?: "",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = CafeDarkBrown
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { bannerMensajeTasa = null },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Cerrar",
+                                        tint = CafeDarkBrown,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -240,7 +287,7 @@ fun AjustesScreen(
                                     )
                                 }
                                 Text(
-                                    text = "Última actualización: ${FormatUtils.formatDate(config.fechaActualizacionTasa)}",
+                                    text = "Oficial BCV • Actualizado: ${FormatUtils.formatDate(config.fechaActualizacionTasa)}",
                                     fontSize = 10.sp,
                                     color = SoftGray
                                 )
@@ -895,14 +942,24 @@ private fun EditarTasaDialog(
                     value = tasaInput,
                     onValueChange = { tasaInput = it },
                     label = { Text("Tasa de Cambio (Bs. por 1 USD) *") },
-                    placeholder = { Text("Ej: 54.50") },
+                    placeholder = { Text("Ej: 875.65") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth().testTag("tasa_cambio_manual_input")
                 )
 
+                // Botón directo para fijar tasa oficial del BCV vigente
+                OutlinedButton(
+                    onClick = { tasaInput = "875.65" },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CafeDarkBrown),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🏛️ Fijar Oficial BCV Vigente (Bs. 875.65)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
                 Text(
-                    "Ejemplos rápidos:",
+                    "Referencias rápidas:",
                     fontSize = 11.sp,
                     color = SoftGray
                 )
@@ -910,7 +967,7 @@ private fun EditarTasaDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf(45.0, 50.0, 54.5, 60.0).forEach { r ->
+                    listOf(800.0, 850.0, 875.65, 900.0, 950.0).forEach { r ->
                         SuggestionChip(
                             onClick = { tasaInput = String.format(java.util.Locale.US, "%.2f", r) },
                             label = { Text("Bs. $r", fontSize = 11.sp) }

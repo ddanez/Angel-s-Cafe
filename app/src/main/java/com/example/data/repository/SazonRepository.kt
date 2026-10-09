@@ -242,6 +242,24 @@ class SazonRepository(
     }
 
     suspend fun seedInitialDataIfNeeded() {
+        val configActual = configuracionDao.getConfiguracionSync()
+        if (configActual == null) {
+            val nuevaConfig = ConfiguracionComercio()
+            configuracionDao.insertOrUpdate(nuevaConfig)
+        } else if (!configActual.fueActivadaConClave && configActual.planLicencia != "DEMO") {
+            // Migrar a licencia Demo de 15 días si no fue activada con clave maestra
+            val configDemo = configActual.copy(
+                planLicencia = "DEMO",
+                tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                estadoLicencia = "DEMO",
+                fechaActivacion = System.currentTimeMillis(),
+                fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                fueActivadaConClave = false,
+                claveLicencia = ""
+            )
+            configuracionDao.insertOrUpdate(configDemo)
+        }
+
         if (platoDao.getCount() == 0) {
             val samplePlatos = listOf(
                 Plato(nombre = "Café Expreso ☕", precio = 1500.0, descripcion = "Café negro aromático tostado medio"),

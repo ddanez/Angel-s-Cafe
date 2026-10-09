@@ -129,6 +129,9 @@ interface ConfiguracionDao {
     @Query("SELECT * FROM configuracion WHERE id = 1 LIMIT 1")
     fun getConfiguracion(): Flow<ConfiguracionComercio?>
 
+    @Query("SELECT * FROM configuracion WHERE id = 1 LIMIT 1")
+    suspend fun getConfiguracionSync(): ConfiguracionComercio?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(config: ConfiguracionComercio)
 

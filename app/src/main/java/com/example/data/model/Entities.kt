@@ -70,17 +70,41 @@ data class ConfiguracionComercio(
     val telefono: String = "",
     val direccion: String = "",
     val mensajeCobro: String = "Hola, le saludamos de Angel's Cafe. Le recordamos cordialmente su saldo pendiente de %MONTO%. ¡Muchas gracias por su preferencia!",
-    val claveLicencia: String = "99 00",
+    val claveLicencia: String = "", // Clave secreta (nunca mostrada al usuario)
     val titularLicencia: String = "Angel's Cafe & Restaurante",
-    val tipoLicencia: String = "Licencia Comercial Vitalicia (Pro Offline)",
-    val estadoLicencia: String = "ACTIVA",
-    val fechaActivacion: Long = 1775822400000L,
-    val planLicencia: String = "VITALICIA", // "MENSUAL", "SEMESTRAL", "ANUAL", "VITALICIA"
-    val fechaVencimientoLicencia: Long = 0L, // 0L significa vitalicia sin vencimiento
+    val tipoLicencia: String = "Licencia de Prueba Demo (15 días)",
+    val estadoLicencia: String = "DEMO", // "DEMO", "ACTIVA", "VENCIDA"
+    val fechaActivacion: Long = System.currentTimeMillis(),
+    val planLicencia: String = "DEMO", // "DEMO", "MENSUAL", "SEMESTRAL", "ANUAL", "VITALICIA"
+    val fechaVencimientoLicencia: Long = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L), // 15 días exactos de prueba inicial
+    val fueActivadaConClave: Boolean = false,
     val tasaCambioBs: Double = 54.50, // Tasa de cambio oficial USD -> Bs (Bolívares)
     val fechaActualizacionTasa: Long = System.currentTimeMillis(),
     val autoActualizarTasa: Boolean = true
-)
+) {
+    /**
+     * Determina si el sistema se encuentra bloqueado por vencimiento de licencia.
+     * La licencia Demo vence a los 15 días.
+     * Las licencias mensuales, semestrales y anuales vencen en su fecha respectiva.
+     * La licencia Vitalicia solo es permanente si fue activada con clave.
+     */
+    fun estaBloqueadaPorLicencia(): Boolean {
+        if (fueActivadaConClave && planLicencia == "VITALICIA") return false
+        if (fueActivadaConClave && fechaVencimientoLicencia <= 0L) return false
+        return System.currentTimeMillis() > fechaVencimientoLicencia
+    }
+
+    /**
+     * Días restantes de vigencia de la licencia actual.
+     * Retorna -1 si es Vitalicia permanente, o el número de días restantes hasta vencer.
+     */
+    fun diasRestantesLicencia(): Long {
+        if (fueActivadaConClave && planLicencia == "VITALICIA") return -1L
+        val dif = fechaVencimientoLicencia - System.currentTimeMillis()
+        if (dif <= 0) return 0L
+        return (dif / (24L * 60L * 60L * 1000L)) + 1L
+    }
+}
 
 @Entity(tableName = "inventario")
 data class ArticuloInventario(

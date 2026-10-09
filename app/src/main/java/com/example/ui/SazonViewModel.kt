@@ -533,7 +533,7 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
      * - SEMESTRAL (180 días)
      * - ANUAL (365 días)
      * - VITALICIA (Sin caducidad)
-     * Validada con la clave maestra "99 00" (o formato "9900").
+     * Requiere obligatoriamente la clave secreta de autorización (9900).
      */
     fun activarLicenciaPlan(
         clave: String,
@@ -542,10 +542,10 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
         onResultado: (Boolean, String) -> Unit
     ) {
         val claveNormalizada = clave.trim().replace(" ", "")
-        val claveValida = claveNormalizada == "9900" || clave.trim() == "99 00"
+        val claveValida = claveNormalizada == "9900"
 
         if (!claveValida) {
-            onResultado(false, "Clave de activación incorrecta. Ingrese la clave autorizada: 99 00")
+            onResultado(false, "Clave de autorización incorrecta. Debe ingresar la clave válida provista por su desarrollador.")
             return
         }
 
@@ -567,18 +567,34 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            val configActual = configuracion.value
+            val configActual = configuracion.first()
             val configActualizada = configActual.copy(
-                claveLicencia = "99 00",
+                claveLicencia = "",
                 titularLicencia = titularLimpio,
                 planLicencia = plan,
                 tipoLicencia = nombreTipo,
                 estadoLicencia = "ACTIVA",
                 fechaActivacion = ahora,
-                fechaVencimientoLicencia = fechaVencimiento
+                fechaVencimientoLicencia = fechaVencimiento,
+                fueActivadaConClave = true
             )
             repository.saveConfiguracion(configActualizada)
             onResultado(true, "¡$nombreTipo activada con éxito para $titularLimpio!")
+        }
+    }
+
+    /**
+     * Simula el vencimiento de la licencia para verificar el bloqueo de seguridad.
+     */
+    fun simularVencimientoLicencia() {
+        viewModelScope.launch {
+            val configActual = configuracion.first()
+            val vencida = configActual.copy(
+                fechaVencimientoLicencia = System.currentTimeMillis() - 60000L,
+                estadoLicencia = "VENCIDA",
+                fueActivadaConClave = false
+            )
+            repository.saveConfiguracion(vencida)
         }
     }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ConfiguracionComercio
@@ -377,13 +378,28 @@ fun AjustesScreen(
                             )
                         }
 
+                        val esDemo = config.planLicencia == "DEMO"
+                        val esActiva = config.fueActivadaConClave && !config.estaBloqueadaPorLicencia()
+
                         Surface(
-                            color = if (config.estadoLicencia == "ACTIVA") SoftGreen.copy(alpha = 0.18f) else SoftRed.copy(alpha = 0.18f),
+                            color = when {
+                                esActiva -> SoftGreen.copy(alpha = 0.18f)
+                                esDemo -> GoldenCrema.copy(alpha = 0.35f)
+                                else -> SoftRed.copy(alpha = 0.18f)
+                            },
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = if (config.estadoLicencia == "ACTIVA") "✓ ACTIVA" else "NO REGISTRADA",
-                                color = if (config.estadoLicencia == "ACTIVA") SoftGreen else SoftRed,
+                                text = when {
+                                    esActiva -> "✓ COMERCIAL ACTIVA"
+                                    esDemo -> "DEMO (15 DÍAS)"
+                                    else -> "⚠️ BLOQUEADA / EXPIRADA"
+                                },
+                                color = when {
+                                    esActiva -> SoftGreen
+                                    esDemo -> CafeDarkBrown
+                                    else -> SoftRed
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -392,7 +408,9 @@ fun AjustesScreen(
                     }
 
                     Text(
-                        text = "Estado y registro de la licencia comercial del sistema para este terminal de punto de venta.",
+                        text = if (config.planLicencia == "DEMO")
+                            "Licencia Demo de evaluación inicial (15 días de prueba). Al finalizar se bloqueará el acceso hasta ingresar la clave de autorización."
+                        else "Licencia comercial activa y autorizada para este terminal de punto de venta.",
                         fontSize = 12.sp,
                         color = SoftGray
                     )
@@ -421,78 +439,102 @@ fun AjustesScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Modalidad / Plan:", fontSize = 12.sp, color = SoftGray)
+                                Text("Plan Actual:", fontSize = 12.sp, color = SoftGray)
                                 Surface(
-                                    color = GoldenCrema.copy(alpha = 0.3f),
+                                    color = if (config.planLicencia == "DEMO") GoldenCrema.copy(alpha = 0.35f) else SoftGreen.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         text = config.planLicencia,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = CafeDarkBrown,
+                                        color = if (config.planLicencia == "DEMO") CafeDarkBrown else SoftGreen,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
+
+                            if (config.planLicencia == "DEMO") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Período de Prueba:", fontSize = 12.sp, color = SoftGray)
+                                    Text(
+                                        "${config.diasRestantesLicencia()} días restantes (de 15)",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (config.diasRestantesLicencia() <= 3) SoftRed else CafeDarkBrown
+                                    )
+                                }
+                            }
+
                             if (config.fechaVencimientoLicencia > 0) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Vencimiento:", fontSize = 12.sp, color = SoftGray)
+                                    Text("Fecha Límite / Vencimiento:", fontSize = 12.sp, color = SoftGray)
                                     Text(
                                         FormatUtils.formatDateOnly(config.fechaVencimientoLicencia),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (System.currentTimeMillis() > config.fechaVencimientoLicencia) SoftRed else CafeBrown
+                                        color = if (config.estaBloqueadaPorLicencia()) SoftRed else CafeBrown
                                     )
+                                }
+                            } else if (config.planLicencia == "VITALICIA" && config.fueActivadaConClave) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Vigencia:", fontSize = 12.sp, color = SoftGray)
+                                    Text("Permanente (Sin fecha de caducidad)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SoftGreen)
                                 }
                             }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Clave / Serial:", fontSize = 12.sp, color = SoftGray)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        config.claveLicencia,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = CafeBrown
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    IconButton(
-                                        onClick = {
-                                            clipboardManager.setText(AnnotatedString(config.claveLicencia))
-                                            Toast.makeText(context, "Clave copiada al portapapeles", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(Icons.Default.Share, contentDescription = "Copiar", tint = CafeBrown, modifier = Modifier.size(16.dp))
-                                    }
-                                }
+                                Text("Estado de Activación:", fontSize = 12.sp, color = SoftGray)
+                                Text(
+                                    text = if (config.fueActivadaConClave) "✓ Autorizado con Clave" else "Prueba Demo Inicial",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (config.fueActivadaConClave) SoftGreen else SoftGray
+                                )
                             }
                         }
                     }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
+                        if (config.planLicencia == "DEMO") {
+                            TextButton(
+                                onClick = { viewModel.simularVencimientoLicencia() },
+                                colors = ButtonDefaults.textButtonColors(contentColor = SoftRed)
+                            ) {
+                                Text("Probar Bloqueo (Simular 15d)", fontSize = 11.sp)
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        Button(
                             onClick = { showLicenciaDialog = true },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = CafeDarkBrown),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = androidx.compose.ui.graphics.SolidColor(CafeDarkBrown)
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Activar / Modificar Licencia", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (config.planLicencia == "DEMO") "Activar Licencia Comercial" else "Modificar / Renovar Licencia",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -683,19 +725,19 @@ fun AjustesScreen(
     }
 }
 
-// DIALOG: ACTIVACIÓN / GESTIÓN DE LICENCIA (1 Mes, Semestral, Anual o Vitalicio con clave 99 00)
+// DIALOG: ACTIVACIÓN / GESTIÓN DE LICENCIA (1 Mes, Semestral, Anual o Vitalicio con Clave Secreta)
 @Composable
 private fun LicenciaDialog(
     configActual: ConfiguracionComercio,
     onDismiss: () -> Unit,
     onActivar: (clave: String, plan: String, titular: String) -> Unit
 ) {
-    var claveInput by remember { mutableStateOf("99 00") }
+    var claveInput by remember { mutableStateOf("") }
     var titularInput by remember { mutableStateOf(configActual.titularLicencia) }
-    var selectedPlan by remember { mutableStateOf(configActual.planLicencia.ifBlank { "VITALICIA" }) }
+    var selectedPlan by remember { mutableStateOf(if (configActual.planLicencia == "DEMO") "VITALICIA" else configActual.planLicencia) }
 
     val planes = listOf(
-        Triple("MENSUAL", "1 Mes", "30 días de vigencia"),
+        Triple("MENSUAL", "1 Mes", "30 días de vigencia comercial"),
         Triple("SEMESTRAL", "Semestral", "6 meses (180 días)"),
         Triple("ANUAL", "Anual", "1 año (365 días)"),
         Triple("VITALICIA", "Vitalicio", "Acceso permanente sin caducidad")
@@ -719,7 +761,7 @@ private fun LicenciaDialog(
             ) {
                 item {
                     Text(
-                        "Selecciona el período de licenciamiento comercial deseado. Para autorizar la activación debe ingresar la clave maestra del sistema (99 00).",
+                        "Selecciona el período de licenciamiento comercial deseado e ingresa la clave de autorización provista por su desarrollador para validar la activación.",
                         fontSize = 12.sp,
                         color = SoftGray
                     )
@@ -775,10 +817,12 @@ private fun LicenciaDialog(
                     OutlinedTextField(
                         value = claveInput,
                         onValueChange = { claveInput = it },
-                        label = { Text("Clave Maestra de Licenciamiento (99 00) *") },
-                        placeholder = { Text("99 00") },
+                        label = { Text("Clave de Autorización *") },
+                        placeholder = { Text("••••") },
                         singleLine = true,
-                        supportingText = { Text("Clave requerida por el sistema: 99 00") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        supportingText = { Text("Ingrese la clave secreta provista por el desarrollador para autorizar este plan") },
                         modifier = Modifier.fillMaxWidth().testTag("licencia_clave_input")
                     )
                 }

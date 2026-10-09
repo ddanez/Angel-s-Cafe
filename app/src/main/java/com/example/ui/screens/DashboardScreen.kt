@@ -79,6 +79,57 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
     ) {
+        // Banner de Licencia Demo (15 días de prueba)
+        if (config.planLicencia == "DEMO") {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = GoldenCrema.copy(alpha = 0.25f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GoldenCrema),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToModule(AppModule.AJUSTES) }
+                        .testTag("dashboard_demo_banner")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Text("⏳", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Licencia Demo: ${config.diasRestantesLicencia()} días restantes (de 15)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CafeDarkBrown
+                                )
+                                Text(
+                                    text = "Vence: ${FormatUtils.formatDateOnly(config.fechaVencimientoLicencia)}. Toque para activar licencia comercial.",
+                                    fontSize = 11.sp,
+                                    color = SoftGray
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = CafeDarkBrown
+                        ) {
+                            Text(
+                                text = "Activar",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SmoothBeige,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Welcome Banner
         item {
             Card(

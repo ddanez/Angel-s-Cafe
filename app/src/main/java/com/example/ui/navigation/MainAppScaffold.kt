@@ -40,6 +40,18 @@ fun MainAppScaffold(
     val carrito by viewModel.carrito.collectAsState()
     val articulos by viewModel.articulosInventario.collectAsState()
 
+    // Si la licencia (Demo 15 días o comercial) se encuentra vencida, se bloquea el sistema
+    if (config.estaBloqueadaPorLicencia()) {
+        LicenciaBloqueadaScreen(
+            config = config,
+            onActivar = { clave, plan, titular, onResultado ->
+                viewModel.activarLicenciaPlan(clave, plan, titular, onResultado)
+            },
+            modifier = modifier
+        )
+        return
+    }
+
     val deudoresCount = remember(clientes) { clientes.count { it.saldoPendiente > 0.0 } }
     val proveedoresDeudaCount = remember(proveedores) { proveedores.count { it.saldoPendienteCXP > 0.0 } }
     val carritoCount = remember(carrito) { carrito.values.sum() }
@@ -102,6 +114,21 @@ fun MainAppScaffold(
                                 color = CafeBrown,
                                 fontWeight = FontWeight.SemiBold
                             )
+                            if (config.planLicencia == "DEMO") {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = GoldenCrema.copy(alpha = 0.35f),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "DEMO: ${config.diasRestantesLicencia()}d restantes",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = CafeDarkBrown,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 

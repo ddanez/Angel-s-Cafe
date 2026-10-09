@@ -195,11 +195,13 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val cfg = configuracion.first()
             if (!cfg.autoActualizarTasa) return@launch
-            val unDiaMillis = 24 * 60 * 60 * 1000L
-            val tiempoTranscurrido = System.currentTimeMillis() - cfg.fechaActualizacionTasa
-            // Si pasaron más de 12 horas o es un nuevo día, intentar actualizar
-            if (tiempoTranscurrido > unDiaMillis / 2) {
-                actualizarTasaDesdeInternet(forzar = false)
+            
+            val hoy = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+            val fechaUltima = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date(cfg.fechaActualizacionTasa))
+            
+            // Si es un día distinto, o si nunca se ha actualizado hoy, o si la tasa está en el valor por defecto de 54.50
+            if (hoy != fechaUltima || cfg.tasaCambioBs <= 55.0) {
+                actualizarTasaDesdeInternet(forzar = true)
             }
         }
     }

@@ -166,18 +166,18 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val tasaOnline = com.example.data.network.TasaCambioService.obtenerTasaDolarBs()
                 if (tasaOnline != null && tasaOnline > 0) {
-                    val cfg = configuracion.value
+                    val cfg = configuracion.first()
                     repository.saveConfiguracion(
                         cfg.copy(
                             tasaCambioBs = tasaOnline,
                             fechaActualizacionTasa = System.currentTimeMillis()
                         )
                     )
-                    val msg = "Tasa del día actualizada a Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)} por dólar"
+                    val msg = "Tasa oficial actualizada: Bs. ${String.format(java.util.Locale.US, "%.2f", tasaOnline)}"
                     _mensajeTasa.value = msg
                     onCompletado?.invoke(true, msg)
                 } else {
-                    val msg = "No se pudo consultar el servicio en línea. Se mantiene la tasa actual de Bs. ${configuracion.value.tasaCambioBs}"
+                    val msg = "No se pudo consultar la tasa en línea. Se mantiene Bs. ${String.format(java.util.Locale.US, "%.2f", configuracion.value.tasaCambioBs)}"
                     _mensajeTasa.value = msg
                     onCompletado?.invoke(false, msg)
                 }
@@ -193,14 +193,9 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun verificarYActualizarTasaDiaria() {
         viewModelScope.launch {
+            kotlinx.coroutines.delay(1200)
             val cfg = configuracion.first()
-            if (!cfg.autoActualizarTasa) return@launch
-            
-            val hoy = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
-            val fechaUltima = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date(cfg.fechaActualizacionTasa))
-            
-            // Si es un día distinto, o si nunca se ha actualizado hoy, o si la tasa está en el valor por defecto de 54.50
-            if (hoy != fechaUltima || cfg.tasaCambioBs <= 55.0) {
+            if (cfg.autoActualizarTasa) {
                 actualizarTasaDesdeInternet(forzar = true)
             }
         }

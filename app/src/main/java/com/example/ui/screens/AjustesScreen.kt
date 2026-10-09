@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -895,7 +897,7 @@ private fun EditarTasaDialog(
     )
 }
 
-// DIALOG: CONFIRMACIÓN DE HARD RESET
+// DIALOG: CONFIRMACIÓN DE HARD RESET (Restablecimiento Total de Fábrica)
 @Composable
 private fun HardResetConfirmDialog(
     onDismiss: () -> Unit,
@@ -905,40 +907,56 @@ private fun HardResetConfirmDialog(
     var cargarDatosEjemplo by remember { mutableStateOf(true) }
 
     val palabraClave = "RESET"
-    val esPalabraCorrecta = confirmText.trim().equals(palabraClave, ignoreCase = false)
+    // Validación flexible: acepta RESET o BORRAR en mayúsculas o minúsculas
+    val esPalabraCorrecta = confirmText.trim().equals(palabraClave, ignoreCase = true) ||
+            confirmText.trim().equals("BORRAR", ignoreCase = true)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = SoftRed, modifier = Modifier.size(36.dp)) },
         title = {
-            Text("¿Confirmar Hard Reset Total?", fontWeight = FontWeight.Bold, color = SoftRed, fontSize = 18.sp)
+            Text(
+                text = "⚠️ Confirmar Hard Reset Total",
+                fontWeight = FontWeight.Bold,
+                color = SoftRed,
+                fontSize = 18.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 Text(
-                    "Esta acción BORRARÁ TODO el contenido de la base de datos:",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "Esta acción eliminará de forma irreversible los datos del sistema:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Surface(
                     color = SoftRed.copy(alpha = 0.08f),
                     shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SoftRed.copy(alpha = 0.2f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("• Clientes y cuentas por cobrar (CXC)", fontSize = 11.sp, color = SoftRed)
-                        Text("• Proveedores y cuentas por pagar (CXP)", fontSize = 11.sp, color = SoftRed)
-                        Text("• Historial de ventas y transacciones", fontSize = 11.sp, color = SoftRed)
-                        Text("• Inventario de Materia Prima y Producto Terminado", fontSize = 11.sp, color = SoftRed)
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("• Ventas, pedidos e historial comercial", fontSize = 11.sp, color = SoftRed)
+                        Text("• Cuentas por cobrar (CXC) y por pagar (CXP)", fontSize = 11.sp, color = SoftRed)
+                        Text("• Clientes y Proveedores registrados", fontSize = 11.sp, color = SoftRed)
+                        Text("• Inventario doble (Materias Primas y Vitrina)", fontSize = 11.sp, color = SoftRed)
                         Text("• Recetas estipuladas y movimientos de stock", fontSize = 11.sp, color = SoftRed)
                     }
                 }
 
-                // Opción para restaurar con datos de ejemplo o completamente en blanco
+                // Opción para restaurar con datos de ejemplo o en blanco
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { cargarDatosEjemplo = !cargarDatosEjemplo },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { cargarDatosEjemplo = !cargarDatosEjemplo },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
@@ -948,40 +966,105 @@ private fun HardResetConfirmDialog(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Recargar datos de demostración limpios (platos, materias primas y recetas de cafetería)",
+                        text = "Recargar datos de ejemplo de cafetería tras el reinicio",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Para prevenir accidentes, escribe exactamente la palabra \"$palabraClave\" para autorizar el reinicio:",
-                    fontSize = 12.sp,
-                    color = SoftGray
-                )
+                // RECUADRO DESTACADO CON LA PALABRA DE SEGURIDAD
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SoftRed.copy(alpha = 0.12f)),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, SoftRed),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "PALABRA DE SEGURIDAD REQUERIDA:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SoftRed
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = palabraClave,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 4.sp,
+                            color = SoftRed
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Escribe la palabra RESET para desbloquear el botón",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
+                }
 
+                // CAMPO DE TEXTO PARA ESCRIBIR LA PALABRA DE SEGURIDAD
                 OutlinedTextField(
                     value = confirmText,
                     onValueChange = { confirmText = it },
-                    placeholder = { Text(palabraClave) },
+                    label = { Text("Escribe la palabra: RESET") },
+                    placeholder = { Text("Escribe RESET aquí...") },
                     singleLine = true,
+                    trailingIcon = {
+                        if (esPalabraCorrecta) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Correcto", tint = SoftGreen)
+                        }
+                    },
+                    supportingText = {
+                        if (esPalabraCorrecta) {
+                            Text("✓ Palabra correcta. Ya puedes confirmar el reinicio.", color = SoftGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        } else {
+                            Text("Debes escribir RESET (en mayúsculas o minúsculas)", color = SoftRed, fontSize = 11.sp)
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SoftRed,
-                        unfocusedBorderColor = SoftRed.copy(alpha = 0.4f)
+                        focusedBorderColor = if (esPalabraCorrecta) SoftGreen else SoftRed,
+                        unfocusedBorderColor = if (esPalabraCorrecta) SoftGreen else SoftRed.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("hard_reset_confirm_input")
                 )
+
+                // Botón rápido para autocompletar si se desea
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = { confirmText = palabraClave },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp), tint = SoftRed)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Autocompletar 'RESET'", fontSize = 11.sp, color = SoftRed, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = { onConfirm(cargarDatosEjemplo) },
                 enabled = esPalabraCorrecta,
-                colors = ButtonDefaults.buttonColors(containerColor = SoftRed),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SoftRed,
+                    disabledContainerColor = SoftRed.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.testTag("hard_reset_execute_button")
             ) {
-                Text("Confirmar y Borrar Todo")
+                Text(
+                    text = if (esPalabraCorrecta) "Confirmar y Borrar Todo" else "Escribe RESET para Confirmar",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
             }
         },
         dismissButton = {

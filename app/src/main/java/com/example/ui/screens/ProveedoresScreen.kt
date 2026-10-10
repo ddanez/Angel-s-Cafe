@@ -3,12 +3,14 @@ package com.example.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -25,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Proveedor
 import com.example.data.repository.ProveedorConSaldo
 import com.example.ui.SazonViewModel
+import com.example.ui.components.EditarTasaDialog
 import com.example.ui.theme.*
 import com.example.ui.util.FormatUtils
 
@@ -39,6 +43,7 @@ fun ProveedoresScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEditarTasaDialog by remember { mutableStateOf(false) }
     var supplierToEdit by remember { mutableStateOf<Proveedor?>(null) }
     var supplierToDelete by remember { mutableStateOf<Proveedor?>(null) }
 
@@ -75,61 +80,156 @@ fun ProveedoresScreen(
             val totalCxp = remember(proveedores) { proveedores.sumOf { it.saldoPendienteCXP } }
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("Catálogo de Proveedores", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("${proveedores.size} registrados", fontSize = 12.sp, color = SoftGray)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Catálogo de Proveedores",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "${proveedores.size} registrados",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Total CXP a Proveedores", fontSize = 11.sp, color = SoftRed)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Total CXP:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = SoftRed
+                        )
                         Text(
                             text = FormatUtils.formatCurrency(totalCxp, config.monedaSimbolo),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
                             color = SoftRed
                         )
                         Text(
-                            text = FormatUtils.formatBs(totalCxp, config.tasaCambioBs),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = "(${FormatUtils.formatBs(totalCxp, config.tasaCambioBs)})",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = SoftRed
                         )
+                        Surface(
+                            onClick = { showEditarTasaDialog = true },
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                            modifier = Modifier.padding(start = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Tasa",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Ajustar Tasa Manual",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Search
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar proveedor o empresa...", color = SoftGray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CafeBrown) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Limpiar")
-                        }
-                    }
-                },
+            // Search (optimizado para mínima altura)
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("search_proveedor_input"),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
+                    .height(36.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = CafeBrown,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Buscar proveedor o empresa...",
+                                color = SoftGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 12.sp
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("search_proveedor_input")
+                        )
+                    }
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = { searchQuery = "" },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Limpiar",
+                                tint = SoftGray,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (filteredList.isEmpty()) {
                 Box(
@@ -219,6 +319,17 @@ fun ProveedoresScreen(
                 TextButton(onClick = { supplierToDelete = null }) {
                     Text("Cancelar")
                 }
+            }
+        )
+    }
+
+    if (showEditarTasaDialog) {
+        EditarTasaDialog(
+            tasaActual = config.tasaCambioBs,
+            onDismiss = { showEditarTasaDialog = false },
+            onConfirm = { nuevaTasa ->
+                viewModel.actualizarTasaCambioManual(nuevaTasa)
+                showEditarTasaDialog = false
             }
         )
     }

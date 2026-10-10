@@ -32,6 +32,7 @@ import com.example.data.model.ConfiguracionComercio
 import com.example.data.model.Plato
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.components.EditarTasaDialog
 import com.example.ui.util.FormatUtils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -168,7 +169,10 @@ fun AjustesScreen(
                             showSavedSnackbar = true
                             Toast.makeText(context, "Datos del comercio actualizados", Toast.LENGTH_SHORT).show()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier.align(Alignment.End)
                     ) {
                         Text("Guardar Cambios", fontWeight = FontWeight.Bold)
@@ -310,7 +314,10 @@ fun AjustesScreen(
                                 Button(
                                     onClick = { viewModel.actualizarTasaDesdeInternet(forzar = true) },
                                     enabled = !actualizandoTasa,
-                                    colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
@@ -575,7 +582,10 @@ fun AjustesScreen(
 
                         Button(
                             onClick = { showLicenciaDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -920,91 +930,6 @@ private fun LicenciaDialog(
     )
 }
 
-// DIALOG: AJUSTE MANUAL DE LA TASA DE CAMBIO
-@Composable
-private fun EditarTasaDialog(
-    tasaActual: Double,
-    onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
-) {
-    var tasaInput by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", tasaActual)) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("💵", fontSize = 22.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Fijar Tasa de Cambio Manual", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Ingresa el valor en Bolívares (Bs.) por cada 1 USD. Todos los módulos, tickets, inventarios y reportes recalcularán automáticamente sus equivalencias.",
-                    fontSize = 12.sp,
-                    color = SoftGray
-                )
-
-                OutlinedTextField(
-                    value = tasaInput,
-                    onValueChange = { tasaInput = it },
-                    label = { Text("Tasa de Cambio (Bs. por 1 USD) *") },
-                    placeholder = { Text("Ej: 875.65") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth().testTag("tasa_cambio_manual_input")
-                )
-
-                // Botón directo para fijar tasa oficial del BCV vigente
-                OutlinedButton(
-                    onClick = { tasaInput = "875.65" },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CafeDarkBrown),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("🏛️ Fijar Oficial BCV Vigente (Bs. 875.65)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Text(
-                    "Referencias rápidas:",
-                    fontSize = 11.sp,
-                    color = SoftGray
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    listOf(800.0, 850.0, 875.65, 900.0, 950.0).forEach { r ->
-                        SuggestionChip(
-                            onClick = { tasaInput = String.format(java.util.Locale.US, "%.2f", r) },
-                            label = { Text("Bs. $r", fontSize = 11.sp) }
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val rate = tasaInput.replace(",", ".").toDoubleOrNull()
-                    if (rate != null && rate > 0) {
-                        onConfirm(rate)
-                    }
-                },
-                enabled = (tasaInput.replace(",", ".").toDoubleOrNull() ?: 0.0) > 0,
-                colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown)
-            ) {
-                Text("Guardar Tasa")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
 
 // DIALOG: CONFIRMACIÓN DE HARD RESET (Restablecimiento Total de Fábrica)
 @Composable

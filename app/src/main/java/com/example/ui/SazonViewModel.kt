@@ -143,6 +143,7 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
             val cfg = configuracion.value
             val actualizada = cfg.copy(
                 tasaCambioBs = nuevaTasa,
+                autoActualizarTasa = false,
                 fechaActualizacionTasa = System.currentTimeMillis()
             )
             repository.saveConfiguracion(actualizada)

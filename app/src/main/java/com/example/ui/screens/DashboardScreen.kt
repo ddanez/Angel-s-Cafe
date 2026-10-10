@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Transaccion
 import com.example.ui.SazonViewModel
+import com.example.ui.components.EditarTasaDialog
 import com.example.ui.navigation.AppModule
 import com.example.ui.theme.*
 import com.example.ui.util.FiltroPeriodo
@@ -46,6 +47,8 @@ fun DashboardScreen(
     val articulos by viewModel.articulosInventario.collectAsState()
     val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
     val mensajeTasa by viewModel.mensajeTasa.collectAsState()
+
+    var showEditarTasaDialog by remember { mutableStateOf(false) }
 
     // Selector de Período temporal para métricas del Dashboard
     var filtroPeriodoDashboard by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.DIA)) }
@@ -237,7 +240,7 @@ fun DashboardScreen(
         // Tasa del Día Oficial Banner
         item {
             Card(
-                onClick = { onNavigateToModule(AppModule.AJUSTES) },
+                onClick = { showEditarTasaDialog = true },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(14.dp),
                 elevation = CardDefaults.cardElevation(2.dp),
@@ -261,13 +264,24 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (actualizandoTasa) "Sincronizando con el BCV..." else "Conversión dual activa • Toca para gestionar",
+                                text = if (actualizandoTasa) "Sincronizando con el BCV..." else "Conversión dual activa • Toca para ajustar",
                                 fontSize = 10.sp,
                                 color = if (actualizandoTasa) MaterialTheme.colorScheme.primary else SoftGray
                             )
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(
+                            onClick = { showEditarTasaDialog = true },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Ajustar tasa manualmente",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         IconButton(
                             onClick = { viewModel.actualizarTasaDesdeInternet(forzar = true) },
                             enabled = !actualizandoTasa,
@@ -279,12 +293,6 @@ fun DashboardScreen(
                                 Icon(Icons.Default.Refresh, contentDescription = "Sincronizar BCV ahora", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             }
                         }
-                        Text(
-                            text = "Ajustes",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }
@@ -636,6 +644,17 @@ fun DashboardScreen(
                 RecentTxCard(tx = tx, clienteNombre = clienteNombre, moneda = config.monedaSimbolo)
             }
         }
+    }
+
+    if (showEditarTasaDialog) {
+        EditarTasaDialog(
+            tasaActual = config.tasaCambioBs,
+            onDismiss = { showEditarTasaDialog = false },
+            onConfirm = { nuevaTasa ->
+                viewModel.actualizarTasaCambioManual(nuevaTasa)
+                showEditarTasaDialog = false
+            }
+        )
     }
 }
 

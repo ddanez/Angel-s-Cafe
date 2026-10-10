@@ -457,7 +457,10 @@ fun DialogoSelectorRangoFechas(
                         errorMensaje = "Error en formato de fechas: Ej. 01/10/2026"
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 modifier = Modifier.testTag("confirmar_rango_fechas_btn")
             ) {
                 Text("Aplicar Período")

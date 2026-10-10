@@ -22,9 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Cliente
 import com.example.data.model.Plato
+import com.example.data.model.Transaccion
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 
 @Composable
 fun VentasScreen(
@@ -36,10 +40,16 @@ fun VentasScreen(
     val platos by viewModel.platos.collectAsState()
     val carrito by viewModel.carrito.collectAsState()
     val clientes by viewModel.clientesConSaldo.collectAsState()
+    val transacciones by viewModel.transacciones.collectAsState()
 
+    var tabSeleccionada by remember { mutableStateOf(0) } // 0: Punto de Venta / Menú, 1: Historial de Ventas
     var searchQuery by remember { mutableStateOf("") }
+    var searchQueryHistorial by remember { mutableStateOf("") }
     var showCheckoutDialog by remember { mutableStateOf(false) }
     var ticketGenerado by remember { mutableStateOf<String?>(null) }
+
+    // Selector de período temporal para el historial de ventas
+    var filtroPeriodo by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.DIA)) }
 
     val totalCarrito = remember(carrito) {
         carrito.entries.sumOf { it.key.precio * it.value }
@@ -56,9 +66,30 @@ fun VentasScreen(
         }
     }
 
+    // Ventas filtradas por período (Día, Semana, Mes, Año, Específico, Todo)
+    val ventasDelPeriodo = remember(transacciones, filtroPeriodo, searchQueryHistorial) {
+        transacciones
+            .filter { (it.tipo == "VENTA_CONTADO" || it.tipo == "COMPRA") && filtroPeriodo.coincide(it.fecha) }
+            .filter {
+                if (searchQueryHistorial.isBlank()) true
+                else it.detalle.contains(searchQueryHistorial, ignoreCase = true)
+            }
+            .sortedByDescending { it.fecha }
+    }
+
+    val totalVentasPeriodo = remember(ventasDelPeriodo) {
+        ventasDelPeriodo.sumOf { it.montoTotal }
+    }
+    val totalVentasContadoPeriodo = remember(ventasDelPeriodo) {
+        ventasDelPeriodo.filter { it.tipo == "VENTA_CONTADO" }.sumOf { it.montoTotal }
+    }
+    val totalVentasCreditoPeriodo = remember(ventasDelPeriodo) {
+        ventasDelPeriodo.filter { it.tipo == "COMPRA" }.sumOf { it.montoTotal }
+    }
+
     Scaffold(
         bottomBar = {
-            if (totalItems > 0) {
+            if (tabSeleccionada == 0 && totalItems > 0) {
                 Surface(
                     shadowElevation = 8.dp,
                     color = MaterialTheme.colorScheme.surface,
@@ -121,64 +152,75 @@ fun VentasScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Punto de Venta / Menú", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Selecciona platos para armar la comanda", fontSize = 12.sp, color = SoftGray)
+                    Text("Gestión de Ventas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Punto de Venta y Registro de Comandas", fontSize = 12.sp, color = SoftGray)
                 }
                 Text("☕ ${config.nombreComercio}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CafeBrown)
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Tabs de Navegación de Ventas
+            TabRow(
+                selectedTabIndex = tabSeleccionada,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(
+                    selected = tabSeleccionada == 0,
+                    onClick = { tabSeleccionada = 0 },
+                    text = { Text("🛍️ Punto de Venta", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                )
+                Tab(
+                    selected = tabSeleccionada == 1,
+                    onClick = { tabSeleccionada = 1 },
+                    text = { Text("🧾 Historial (${ventasDelPeriodo.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                )
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Search
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar café, empanada, desayuno...", color = SoftGray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CafeBrown) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+            if (tabSeleccionada == 0) {
+                // Search
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Buscar café, empanada, desayuno...", color = SoftGray) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CafeBrown) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            if (filteredPlatos.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No hay platos disponibles en el menú.", color = SoftGray)
-                }
-            } else {
+                // Menu Catalog Grid / List
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = if (totalItems > 0) 80.dp else 16.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredPlatos) { plato ->
                         val count = carrito[plato] ?: 0
                         Card(
                             shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (count > 0) CafeBrown.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.agregarAlCarrito(plato) }
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(2.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("plato_item_${plato.id}")
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
@@ -191,22 +233,23 @@ fun VentasScreen(
                                         Text(
                                             text = plato.descripcion,
                                             fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                            color = SoftGray,
                                             maxLines = 1
                                         )
                                     }
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = FormatUtils.formatDual(plato.precio, config.tasaCambioBs, config.monedaSimbolo),
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CafeBrown
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = CafeDarkBrown
                                     )
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (count > 0) {
                                         IconButton(onClick = { viewModel.removerDelCarrito(plato) }) {
-                                            Icon(Icons.Default.Clear, contentDescription = "Quitar uno", tint = SoftRed)
+                                            Icon(Icons.Default.Delete, contentDescription = "Quitar", tint = SoftRed)
                                         }
                                         Text(
                                             text = "$count",
@@ -217,6 +260,192 @@ fun VentasScreen(
                                     }
                                     IconButton(onClick = { viewModel.agregarAlCarrito(plato) }) {
                                         Icon(Icons.Default.Add, contentDescription = "Agregar", tint = SoftGreen)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // --- PESTAÑA 1: HISTORIAL DE VENTAS POR PERÍODO ---
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Selector de Período temporal
+                    item {
+                        SelectorPeriodoBar(
+                            filtro = filtroPeriodo,
+                            onFiltroCambiado = { filtroPeriodo = it }
+                        )
+                    }
+
+                    // Card de métricas de ventas en el período
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Facturación del Período", fontSize = 12.sp, color = SoftGray)
+                                    Text("${ventasDelPeriodo.size} tickets", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CafeBrown)
+                                }
+                                Text(
+                                    text = FormatUtils.formatCurrency(totalVentasPeriodo, config.monedaSimbolo),
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Equivalente: ${FormatUtils.formatBs(totalVentasPeriodo, config.tasaCambioBs)}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CafeDarkBrown
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Contado: ${FormatUtils.formatDual(totalVentasContadoPeriodo, config.tasaCambioBs, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftGreen)
+                                    Text("Crédito (CXC): ${FormatUtils.formatDual(totalVentasCreditoPeriodo, config.tasaCambioBs, config.monedaSimbolo)}", fontSize = 11.sp, color = SoftRed)
+                                }
+                            }
+                        }
+                    }
+
+                    // Buscador dentro del historial
+                    item {
+                        OutlinedTextField(
+                            value = searchQueryHistorial,
+                            onValueChange = { searchQueryHistorial = it },
+                            placeholder = { Text("Buscar ticket o detalle...", color = SoftGray) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CafeBrown) },
+                            trailingIcon = {
+                                if (searchQueryHistorial.isNotEmpty()) {
+                                    IconButton(onClick = { searchQueryHistorial = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                    }
+
+                    if (ventasDelPeriodo.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("🧾", fontSize = 36.sp)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "No hay ventas registradas en ${filtroPeriodo.textoDescriptivo}",
+                                        fontSize = 13.sp,
+                                        color = SoftGray
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        items(ventasDelPeriodo) { venta ->
+                            val esCredito = venta.tipo == "COMPRA"
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(if (esCredito) "📋" else "💵", fontSize = 16.sp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (esCredito) "Venta a Crédito (CXC)" else "Venta de Contado",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = if (esCredito) CafeBrown else SoftGreen
+                                            )
+                                        }
+                                        Text(
+                                            text = FormatUtils.formatDate(venta.fecha),
+                                            fontSize = 11.sp,
+                                            color = SoftGray
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = venta.detalle,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = FormatUtils.formatCurrency(venta.montoTotal, config.monedaSimbolo),
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = FormatUtils.formatBs(venta.montoTotal, config.tasaCambioBs),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CafeDarkBrown
+                                            )
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                val ticketReimpreso = """
+🧾 ${config.nombreComercio}
+Comprobante de Venta #${venta.id}
+----------------------------------
+Fecha: ${FormatUtils.formatDate(venta.fecha)}
+Condición: ${if (esCredito) "Crédito (CXC)" else "Contado"}
+Detalle:
+${venta.detalle}
+----------------------------------
+TOTAL USD: ${FormatUtils.formatCurrency(venta.montoTotal, config.monedaSimbolo)}
+TOTAL BS: ${FormatUtils.formatBs(venta.montoTotal, config.tasaCambioBs)}
+Tasa Oficial BCV: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}
+¡Gracias por su preferencia! ☕
+                                                """.trimIndent()
+                                                ticketGenerado = ticketReimpreso
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Ticket", fontSize = 11.sp)
+                                        }
                                     }
                                 }
                             }
@@ -267,7 +496,7 @@ TOTAL EN BOLÍVARES: ${FormatUtils.formatBs(totalCarrito, config.tasaCambioBs)}
     ticketGenerado?.let { ticket ->
         AlertDialog(
             onDismissRequest = { ticketGenerado = null },
-            title = { Text("¡Venta Registrada Exitosamente! 🎉") },
+            title = { Text("Comprobante de Venta 🧾") },
             text = {
                 Column {
                     Text(

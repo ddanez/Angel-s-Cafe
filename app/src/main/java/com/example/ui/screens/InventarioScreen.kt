@@ -29,7 +29,10 @@ import com.example.data.model.MovimientoInventario
 import com.example.data.model.RecetaIngrediente
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -49,6 +52,9 @@ fun InventarioScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("Todos") }
     var soloBajoStock by remember { mutableStateOf(false) }
+
+    // Filtro temporal para el Kárdex de movimientos
+    var filtroPeriodoKardex by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.MES)) }
 
     // Dialog state
     var showAddArticleDialog by remember { mutableStateOf(false) }
@@ -106,13 +112,15 @@ fun InventarioScreen(
         }
     }
 
-    val filteredMovimientos = remember(movimientos, searchQuery) {
-        if (searchQuery.isBlank()) movimientos
-        else movimientos.filter {
-            it.articuloNombre.contains(searchQuery, ignoreCase = true) ||
-                    it.motivo.contains(searchQuery, ignoreCase = true) ||
-                    it.tipo.contains(searchQuery, ignoreCase = true)
-        }
+    val filteredMovimientos = remember(movimientos, searchQuery, filtroPeriodoKardex) {
+        movimientos
+            .filter { filtroPeriodoKardex.coincide(it.fecha) }
+            .filter {
+                if (searchQuery.isBlank()) true
+                else it.articuloNombre.contains(searchQuery, ignoreCase = true) ||
+                        it.motivo.contains(searchQuery, ignoreCase = true) ||
+                        it.tipo.contains(searchQuery, ignoreCase = true)
+            }
     }
 
     Scaffold(
@@ -467,13 +475,20 @@ fun InventarioScreen(
                     }
                 }
             } else {
-                // Tab 2: Historial de Movimientos
+                // Tab 2: Historial de Movimientos / Kárdex con filtro por período
+                item {
+                    SelectorPeriodoBar(
+                        filtro = filtroPeriodoKardex,
+                        onFiltroCambiado = { filtroPeriodoKardex = it }
+                    )
+                }
+
                 if (filteredMovimientos.isEmpty()) {
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp),
+                                .padding(vertical = 16.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             shape = RoundedCornerShape(16.dp)
                         ) {

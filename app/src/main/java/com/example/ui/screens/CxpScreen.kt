@@ -23,7 +23,10 @@ import com.example.data.model.PagoProveedor
 import com.example.data.repository.ProveedorConSaldo
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 
 @Composable
 fun CxpScreen(
@@ -38,6 +41,9 @@ fun CxpScreen(
     var provParaPago by remember { mutableStateOf<ProveedorConSaldo?>(null) }
     var tabSeleccionada by remember { mutableIntStateOf(0) } // 0: Deudas con Proveedores, 1: Historial de Pagos
 
+    // Filtro de período para pagos a proveedores
+    var filtroPeriodoPagos by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.MES)) }
+
     val provDeudores = remember(proveedores) {
         proveedores.filter { it.saldoPendienteCXP > 0.0 }.sortedByDescending { it.saldoPendienteCXP }
     }
@@ -51,6 +57,16 @@ fun CxpScreen(
             it.proveedor.nombre.contains(searchQuery, ignoreCase = true) ||
             it.proveedor.empresa.contains(searchQuery, ignoreCase = true)
         }
+    }
+
+    val pagosPeriodo = remember(pagosProveedor, filtroPeriodoPagos) {
+        pagosProveedor
+            .filter { filtroPeriodoPagos.coincide(it.fecha) }
+            .sortedByDescending { it.fecha }
+    }
+
+    val totalPagadoPeriodo = remember(pagosPeriodo) {
+        pagosPeriodo.sumOf { it.monto }
     }
 
     Column(
@@ -244,16 +260,62 @@ fun CxpScreen(
             }
         } else {
             // Historial de pagos a proveedores
-            if (pagosProveedor.isEmpty()) {
+            SelectorPeriodoBar(
+                filtro = filtroPeriodoPagos,
+                onFiltroCambiado = { filtroPeriodoPagos = it }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Card de Total Pagado en el Período
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Pagado a Proveedores en Período", fontSize = 11.sp, color = SoftGray)
+                        Text(
+                            text = FormatUtils.formatCurrency(totalPagadoPeriodo, config.monedaSimbolo),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SoftRed
+                        )
+                        Text(
+                            text = FormatUtils.formatBs(totalPagadoPeriodo, config.tasaCambioBs),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CafeDarkBrown
+                        )
+                    }
+                    Text(
+                        "${pagosPeriodo.size} pagos",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CafeBrown
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (pagosPeriodo.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay pagos a proveedores registrados.", color = SoftGray)
+                    Text("No hay pagos registrados en ${filtroPeriodoPagos.textoDescriptivo}.", color = SoftGray)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(pagosProveedor) { pago ->
+                    items(pagosPeriodo) { pago ->
                         val provNombre = remember(pago.proveedorId, proveedores) {
                             proveedores.find { it.proveedor.id == pago.proveedorId }?.proveedor?.nombre ?: "Proveedor General"
                         }

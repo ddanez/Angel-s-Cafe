@@ -23,7 +23,10 @@ import com.example.data.model.Transaccion
 import com.example.ui.SazonViewModel
 import com.example.ui.navigation.AppModule
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -44,6 +47,9 @@ fun DashboardScreen(
     val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
     val mensajeTasa by viewModel.mensajeTasa.collectAsState()
 
+    // Selector de Período temporal para métricas del Dashboard
+    var filtroPeriodoDashboard by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.DIA)) }
+
     LaunchedEffect(mensajeTasa) {
         mensajeTasa?.let {
             android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
@@ -60,17 +66,17 @@ fun DashboardScreen(
         proveedores.sumOf { it.saldoPendienteCXP }
     }
 
-    val hoyString = remember { SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date()) }
-    val ventasHoy = remember(transacciones) {
-        transacciones
+    val transaccionesPeriodo = remember(transacciones, filtroPeriodoDashboard) {
+        transacciones.filter { filtroPeriodoDashboard.coincide(it.fecha) }
+    }
+    val ventasPeriodo = remember(transaccionesPeriodo) {
+        transaccionesPeriodo
             .filter { it.tipo in listOf("VENTA_CONTADO", "COMPRA") }
-            .filter { SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(it.fecha)) == hoyString }
             .sumOf { it.montoTotal }
     }
-    val recaudadoHoy = remember(transacciones) {
-        transacciones
+    val recaudadoPeriodo = remember(transaccionesPeriodo) {
+        transaccionesPeriodo
             .filter { it.tipo == "ABONO" }
-            .filter { SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(it.fecha)) == hoyString }
             .sumOf { it.montoTotal }
     }
     val comprasMes = remember(compras) {
@@ -180,43 +186,50 @@ fun DashboardScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Ventas Hoy", style = MaterialTheme.typography.labelMedium, color = SoftGray)
+                            Text("Ventas (${filtroPeriodoDashboard.tipo.titulo})", style = MaterialTheme.typography.labelMedium, color = SoftGray)
                             Text(
-                                FormatUtils.formatCurrency(ventasHoy, config.monedaSimbolo),
+                                FormatUtils.formatCurrency(ventasPeriodo, config.monedaSimbolo),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SmoothBeige
                             )
                             Text(
-                                FormatUtils.formatBs(ventasHoy, config.tasaCambioBs),
+                                FormatUtils.formatBs(ventasPeriodo, config.tasaCambioBs),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = GoldenCrema
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Cobrado Hoy", style = MaterialTheme.typography.labelMedium, color = SoftGray)
+                            Text("Cobrado (${filtroPeriodoDashboard.tipo.titulo})", style = MaterialTheme.typography.labelMedium, color = SoftGray)
                             Text(
-                                FormatUtils.formatCurrency(recaudadoHoy, config.monedaSimbolo),
+                                FormatUtils.formatCurrency(recaudadoPeriodo, config.monedaSimbolo),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = SoftGreen
                             )
                             Text(
-                                FormatUtils.formatBs(recaudadoHoy, config.tasaCambioBs),
+                                FormatUtils.formatBs(recaudadoPeriodo, config.tasaCambioBs),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = SoftGreen.copy(alpha = 0.9f)
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SelectorPeriodoBar(
+                        filtro = filtroPeriodoDashboard,
+                        onFiltroCambiado = { filtroPeriodoDashboard = it }
+                    )
                 }
             }
         }

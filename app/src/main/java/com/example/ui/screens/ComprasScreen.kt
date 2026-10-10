@@ -24,7 +24,10 @@ import com.example.data.model.Compra
 import com.example.data.model.Proveedor
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 
 @Composable
 fun ComprasScreen(
@@ -39,13 +42,20 @@ fun ComprasScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var compraToDelete by remember { mutableStateOf<Compra?>(null) }
 
-    val totalCompras = remember(compras) { compras.sumOf { it.montoTotal } }
-    val totalContado = remember(compras) { compras.filter { it.condicion == "CONTADO" }.sumOf { it.montoTotal } }
-    val totalCredito = remember(compras) { compras.filter { it.condicion == "CREDITO" }.sumOf { it.montoTotal } }
+    // Selector de Período temporal (Día, Semana, Mes, Año, Específico, Todo)
+    var filtroPeriodo by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.MES)) }
 
-    val filteredCompras = remember(searchQuery, compras) {
-        if (searchQuery.isBlank()) compras
-        else compras.filter {
+    val comprasPeriodo = remember(compras, filtroPeriodo) {
+        compras.filter { filtroPeriodo.coincide(it.fecha) }
+    }
+
+    val totalCompras = remember(comprasPeriodo) { comprasPeriodo.sumOf { it.montoTotal } }
+    val totalContado = remember(comprasPeriodo) { comprasPeriodo.filter { it.condicion == "CONTADO" }.sumOf { it.montoTotal } }
+    val totalCredito = remember(comprasPeriodo) { comprasPeriodo.filter { it.condicion == "CREDITO" }.sumOf { it.montoTotal } }
+
+    val filteredCompras = remember(searchQuery, comprasPeriodo) {
+        if (searchQuery.isBlank()) comprasPeriodo
+        else comprasPeriodo.filter {
             it.proveedorNombre.contains(searchQuery, ignoreCase = true) ||
             it.detalle.contains(searchQuery, ignoreCase = true)
         }
@@ -71,6 +81,14 @@ fun ComprasScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp)
         ) {
+            // Selector de Período
+            SelectorPeriodoBar(
+                filtro = filtroPeriodo,
+                onFiltroCambiado = { filtroPeriodo = it }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             // Metrics Card
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -83,8 +101,8 @@ fun ComprasScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Total Compras Realizadas", fontSize = 12.sp, color = SoftGray)
-                        Text("${compras.size} registros", fontSize = 11.sp, color = SoftGray)
+                        Text("Compras del Período", fontSize = 12.sp, color = SoftGray)
+                        Text("${comprasPeriodo.size} registros", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CafeBrown)
                     }
                     Text(
                         text = FormatUtils.formatCurrency(totalCompras, config.monedaSimbolo),

@@ -5,20 +5,26 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 
 @Composable
 fun ReportesScreen(
@@ -33,28 +39,43 @@ fun ReportesScreen(
     val compras by viewModel.compras.collectAsState()
     val pagosProveedor by viewModel.pagosProveedor.collectAsState()
 
-    // Calculations
-    val ventasContado = remember(transacciones) {
-        transacciones.filter { it.tipo == "VENTA_CONTADO" }.sumOf { it.montoTotal }
+    // Selector de Período temporal (Día, Semana, Mes, Año, Específico, Todo)
+    var filtroPeriodo by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.MES)) }
+
+    // Filtrado de datos por el período seleccionado
+    val transaccionesPeriodo = remember(transacciones, filtroPeriodo) {
+        transacciones.filter { filtroPeriodo.coincide(it.fecha) }
     }
-    val cobrosAbonos = remember(transacciones) {
-        transacciones.filter { it.tipo == "ABONO" }.sumOf { it.montoTotal }
+    val comprasPeriodo = remember(compras, filtroPeriodo) {
+        compras.filter { filtroPeriodo.coincide(it.fecha) }
     }
-    val ventasCredito = remember(transacciones) {
-        transacciones.filter { it.tipo == "COMPRA" }.sumOf { it.montoTotal }
+    val pagosProveedorPeriodo = remember(pagosProveedor, filtroPeriodo) {
+        pagosProveedor.filter { filtroPeriodo.coincide(it.fecha) }
+    }
+
+    // Cálculos financieros del período
+    val ventasContado = remember(transaccionesPeriodo) {
+        transaccionesPeriodo.filter { it.tipo == "VENTA_CONTADO" }.sumOf { it.montoTotal }
+    }
+    val cobrosAbonos = remember(transaccionesPeriodo) {
+        transaccionesPeriodo.filter { it.tipo == "ABONO" }.sumOf { it.montoTotal }
+    }
+    val ventasCredito = remember(transaccionesPeriodo) {
+        transaccionesPeriodo.filter { it.tipo == "COMPRA" }.sumOf { it.montoTotal }
     }
     val totalIngresosEfectivos = ventasContado + cobrosAbonos
 
-    val comprasContado = remember(compras) {
-        compras.filter { it.condicion == "CONTADO" }.sumOf { it.montoTotal }
+    val comprasContado = remember(comprasPeriodo) {
+        comprasPeriodo.filter { it.condicion == "CONTADO" }.sumOf { it.montoTotal }
     }
-    val pagosAProveedores = remember(pagosProveedor) {
-        pagosProveedor.sumOf { it.monto }
+    val pagosAProveedores = remember(pagosProveedorPeriodo) {
+        pagosProveedorPeriodo.sumOf { it.monto }
     }
     val totalEgresosEfectivos = comprasContado + pagosAProveedores
 
     val utilidadEstimada = totalIngresosEfectivos - totalEgresosEfectivos
 
+    // Cartera global acumulada (CXC y CXP)
     val totalCxC = remember(clientes) { clientes.sumOf { it.saldoPendiente } }
     val totalCxp = remember(proveedores) { proveedores.sumOf { it.saldoPendienteCXP } }
     val balanceCredito = totalCxC - totalCxp
@@ -82,21 +103,24 @@ fun ReportesScreen(
                     onClick = {
                         val resumenTexto = """
 📊 REPORTE FINANCIERO - ${config.nombreComercio}
+📅 Período: ${filtroPeriodo.textoDescriptivo}
 ----------------------------------------
-INGRESOS EFECTIVOS: ${FormatUtils.formatCurrency(totalIngresosEfectivos, config.monedaSimbolo)}
+INGRESOS EFECTIVOS: ${FormatUtils.formatCurrency(totalIngresosEfectivos, config.monedaSimbolo)} (${FormatUtils.formatBs(totalIngresosEfectivos, config.tasaCambioBs)})
 • Ventas al Contado: ${FormatUtils.formatCurrency(ventasContado, config.monedaSimbolo)}
 • Cobros / Abonos CXC: ${FormatUtils.formatCurrency(cobrosAbonos, config.monedaSimbolo)}
+• Ventas a Crédito Otorgadas: ${FormatUtils.formatCurrency(ventasCredito, config.monedaSimbolo)}
 
-EGRESOS EFECTIVOS: ${FormatUtils.formatCurrency(totalEgresosEfectivos, config.monedaSimbolo)}
+EGRESOS EFECTIVOS: ${FormatUtils.formatCurrency(totalEgresosEfectivos, config.monedaSimbolo)} (${FormatUtils.formatBs(totalEgresosEfectivos, config.tasaCambioBs)})
 • Compras al Contado: ${FormatUtils.formatCurrency(comprasContado, config.monedaSimbolo)}
 • Pagos a Proveedores: ${FormatUtils.formatCurrency(pagosAProveedores, config.monedaSimbolo)}
 
-UTILIDAD ESTIMADA: ${FormatUtils.formatCurrency(utilidadEstimada, config.monedaSimbolo)}
+UTILIDAD ESTIMADA EN PERÍODO: ${FormatUtils.formatCurrency(utilidadEstimada, config.monedaSimbolo)} (${FormatUtils.formatBs(utilidadEstimada, config.tasaCambioBs)})
 ----------------------------------------
-POSICIÓN DE CRÉDITO:
+CARTERA GENERAL:
 • Cuentas por Cobrar (CXC): ${FormatUtils.formatCurrency(totalCxC, config.monedaSimbolo)}
 • Cuentas por Pagar (CXP): ${FormatUtils.formatCurrency(totalCxp, config.monedaSimbolo)}
 • Balance Neto: ${FormatUtils.formatCurrency(balanceCredito, config.monedaSimbolo)}
+Tasa Oficial BCV: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}
                         """.trimIndent()
                         val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
@@ -104,14 +128,23 @@ POSICIÓN DE CRÉDITO:
                             type = "text/plain"
                         }
                         context.startActivity(Intent.createChooser(sendIntent, "Compartir Reporte"))
-                    }
+                    },
+                    modifier = Modifier.testTag("compartir_reporte_btn")
                 ) {
                     Icon(Icons.Default.Share, contentDescription = "Compartir reporte", tint = CafeBrown)
                 }
             }
         }
 
-        // Operative Net Profit Card
+        // Selector de Período (Día, Semana, Mes, Año, Específico, Todo)
+        item {
+            SelectorPeriodoBar(
+                filtro = filtroPeriodo,
+                onFiltroCambiado = { filtroPeriodo = it }
+            )
+        }
+
+        // Operative Net Profit Card del período
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -121,7 +154,19 @@ POSICIÓN DE CRÉDITO:
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Flujo de Caja Neto (Ingresos - Gastos)", fontSize = 12.sp, color = SmoothBeige.copy(alpha = 0.8f))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Flujo Neto en Período", fontSize = 12.sp, color = SmoothBeige.copy(alpha = 0.8f))
+                        Text(
+                            filtroPeriodo.tipo.titulo,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GoldenCrema
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = FormatUtils.formatCurrency(utilidadEstimada, config.monedaSimbolo),
@@ -141,24 +186,24 @@ POSICIÓN DE CRÉDITO:
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Ingresos Reales:", fontSize = 11.sp, color = SoftGray)
+                            Text("Ingresos en Período:", fontSize = 11.sp, color = SmoothBeige.copy(alpha = 0.7f))
                             Text(FormatUtils.formatCurrency(totalIngresosEfectivos, config.monedaSimbolo), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SoftGreen)
                             Text(FormatUtils.formatBs(totalIngresosEfectivos, config.tasaCambioBs), fontSize = 11.sp, color = SoftGreen)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Egresos Reales:", fontSize = 11.sp, color = SoftGray)
-                            Text(FormatUtils.formatCurrency(totalEgresosEfectivos, config.monedaSimbolo), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SoftRed)
-                            Text(FormatUtils.formatBs(totalEgresosEfectivos, config.tasaCambioBs), fontSize = 11.sp, color = SoftRed)
+                            Text("Egresos en Período:", fontSize = 11.sp, color = SmoothBeige.copy(alpha = 0.7f))
+                            Text(FormatUtils.formatCurrency(totalEgresosEfectivos, config.monedaSimbolo), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = LightText)
+                            Text(FormatUtils.formatBs(totalEgresosEfectivos, config.tasaCambioBs), fontSize = 11.sp, color = LightText)
                         }
                     }
                 }
             }
         }
 
-        // Detailed Breakdown Card
+        // Detailed Breakdown Card en Período
         item {
-            Text("Desglose de Ingresos y Gastos", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("Desglose del Período (${filtroPeriodo.textoDescriptivo})", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(4.dp))
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -171,14 +216,27 @@ POSICIÓN DE CRÉDITO:
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                     ReportRowItem(label = "Compras de Insumos al Contado", value = FormatUtils.formatDual(comprasContado, config.tasaCambioBs, config.monedaSimbolo), color = SoftRed)
                     ReportRowItem(label = "Pagos Realizados a Proveedores", value = FormatUtils.formatDual(pagosAProveedores, config.tasaCambioBs, config.monedaSimbolo), color = SoftRed)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                    ReportRowItem(
+                        label = "Total Ingresos Efectivos",
+                        value = FormatUtils.formatDual(totalIngresosEfectivos, config.tasaCambioBs, config.monedaSimbolo),
+                        color = SoftGreen,
+                        isBold = true
+                    )
+                    ReportRowItem(
+                        label = "Total Egresos Efectivos",
+                        value = FormatUtils.formatDual(totalEgresosEfectivos, config.tasaCambioBs, config.monedaSimbolo),
+                        color = SoftRed,
+                        isBold = true
+                    )
                 }
             }
         }
 
         // Credit Balance Card (CXC vs CXP)
         item {
-            Text("Balance de Cuentas (CXC vs CXP)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("Balance de Cuentas (Cartera Actual)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(4.dp))
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -209,7 +267,7 @@ POSICIÓN DE CRÉDITO:
         // Top Debtors and Clients
         item {
             Text("Principales Cuentas por Cobrar", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             val topDeudores = clientes.filter { it.saldoPendiente > 0 }.sortedByDescending { it.saldoPendiente }.take(5)
             if (topDeudores.isEmpty()) {
                 Text("No hay clientes con saldo pendiente de pago.", color = SoftGray, fontSize = 12.sp)

@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.repository.ClienteConSaldo
 import com.example.ui.SazonViewModel
 import com.example.ui.theme.*
+import com.example.ui.util.FiltroPeriodo
 import com.example.ui.util.FormatUtils
+import com.example.ui.util.SelectorPeriodoBar
+import com.example.ui.util.TipoPeriodo
 
 @Composable
 fun CxcScreen(
@@ -41,6 +44,9 @@ fun CxcScreen(
     var searchQuery by remember { mutableStateOf("") }
     var clienteParaAbono by remember { mutableStateOf<ClienteConSaldo?>(null) }
     var tabSeleccionada by remember { mutableIntStateOf(0) } // 0: Clientes Deudores, 1: Historial Abonos
+
+    // Filtro de período para historial de abonos
+    var filtroPeriodoAbonos by remember { mutableStateOf(FiltroPeriodo.porDefecto(TipoPeriodo.MES)) }
 
     val deudores = remember(clientes) {
         clientes.filter { it.saldoPendiente > 0.0 }.sortedByDescending { it.saldoPendiente }
@@ -57,8 +63,14 @@ fun CxcScreen(
         }
     }
 
-    val historialAbonos = remember(transacciones) {
-        transacciones.filter { it.tipo == "ABONO" }
+    val historialAbonos = remember(transacciones, filtroPeriodoAbonos) {
+        transacciones
+            .filter { it.tipo == "ABONO" && filtroPeriodoAbonos.coincide(it.fecha) }
+            .sortedByDescending { it.fecha }
+    }
+
+    val totalAbonosPeriodo = remember(historialAbonos) {
+        historialAbonos.sumOf { it.montoTotal }
     }
 
     Column(
@@ -196,9 +208,55 @@ fun CxcScreen(
             }
         } else {
             // Historial de abonos
+            SelectorPeriodoBar(
+                filtro = filtroPeriodoAbonos,
+                onFiltroCambiado = { filtroPeriodoAbonos = it }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Card de Total Recaudado en el Período
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Recaudado en Período", fontSize = 11.sp, color = SoftGray)
+                        Text(
+                            text = FormatUtils.formatCurrency(totalAbonosPeriodo, config.monedaSimbolo),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SoftGreen
+                        )
+                        Text(
+                            text = FormatUtils.formatBs(totalAbonosPeriodo, config.tasaCambioBs),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CafeDarkBrown
+                        )
+                    }
+                    Text(
+                        "${historialAbonos.size} cobros",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CafeBrown
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             if (historialAbonos.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No se han registrado abonos todavía.", color = SoftGray)
+                    Text("No se han registrado abonos en ${filtroPeriodoAbonos.textoDescriptivo}.", color = SoftGray)
                 }
             } else {
                 LazyColumn(

@@ -80,76 +80,60 @@ fun ProveedoresScreen(
             val totalCxp = remember(proveedores) { proveedores.sumOf { it.saldoPendienteCXP } }
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
+                    // Fila 1: Título y ajuste manual de tasa
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Catálogo de Proveedores",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "${proveedores.size} registrados",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                text = "Catálogo de Proveedores",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Total CXP:",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = SoftRed
-                        )
-                        Text(
-                            text = FormatUtils.formatCurrency(totalCxp, config.monedaSimbolo),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = SoftRed
-                        )
-                        Text(
-                            text = "(${FormatUtils.formatBs(totalCxp, config.tasaCambioBs)})",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SoftRed
-                        )
-                        Surface(
-                            onClick = { showEditarTasaDialog = true },
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                            modifier = Modifier.padding(start = 2.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
-                                    text = "Tasa",
-                                    fontSize = 10.sp,
+                                    text = "${proveedores.size} reg.",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Botón de ajuste manual de tasa
+                        Surface(
+                            onClick = { showEditarTasaDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    text = "Tasa: Bs. ${String.format(java.util.Locale.US, "%.2f", config.tasaCambioBs)}",
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -157,9 +141,42 @@ fun ProveedoresScreen(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Ajustar Tasa Manual",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(10.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Fila 2: Total CXP a Proveedores
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Total CXP a Proveedores:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = SoftGray
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = FormatUtils.formatCurrency(totalCxp, config.monedaSimbolo),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = SoftRed
+                            )
+                            Text(
+                                text = "(${FormatUtils.formatBs(totalCxp, config.tasaCambioBs)})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SoftRed
+                            )
                         }
                     }
                 }
@@ -167,14 +184,14 @@ fun ProveedoresScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Search (optimizado para mínima altura)
+            // Search (altura compacta de 38dp)
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(10.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp)
+                    .height(38.dp)
             ) {
                 Row(
                     modifier = Modifier

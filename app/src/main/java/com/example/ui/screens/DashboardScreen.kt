@@ -298,61 +298,6 @@ fun DashboardScreen(
             }
         }
 
-        // Acceso directo destacado al menú lateral
-        item {
-            Card(
-                onClick = onOpenDrawer,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("dashboard_open_drawer_button")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        color = CafeDarkBrown,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = SmoothBeige,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Menú Lateral de Módulos (10)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "Toca aquí o en ☰ en la esquina superior izquierda",
-                            fontSize = 11.sp,
-                            color = SoftGray
-                        )
-                    }
-                    Text(
-                        text = "Abrir ☰",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-        }
 
         // Key Financial KPI Cards
         item {
@@ -451,77 +396,6 @@ fun DashboardScreen(
             }
         }
 
-        // Inventario Quick Alert KPI if low stock or inventory summary
-        item {
-            Card(
-                onClick = { onNavigateToModule(AppModule.INVENTARIO) },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (articulosBajoStock.isNotEmpty()) SoftRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("kpi_inventario_summary_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (articulosBajoStock.isNotEmpty()) SoftRed else CafeDarkBrown),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("📦", fontSize = 22.sp)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Control de Inventario",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (articulosBajoStock.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    color = SoftRed,
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "${articulosBajoStock.size} ALERTA",
-                                        color = LightText,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-                        Text(
-                            text = if (articulosBajoStock.isNotEmpty())
-                                "${articulosBajoStock.size} insumos con stock por debajo del mínimo"
-                            else
-                                "${articulos.size} artículos en almacén con stock adecuado",
-                            fontSize = 12.sp,
-                            color = if (articulosBajoStock.isNotEmpty()) SoftRed else SoftGray
-                        )
-                    }
-                    Text(
-                        text = "Ver Stock ➔",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
 
         // Quick Access Modules Grid
         item {

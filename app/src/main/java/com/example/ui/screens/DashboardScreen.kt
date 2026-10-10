@@ -34,12 +34,21 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     onOpenDrawer: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val config by viewModel.configuracion.collectAsState()
     val clientes by viewModel.clientesConSaldo.collectAsState()
     val proveedores by viewModel.proveedoresConSaldo.collectAsState()
     val transacciones by viewModel.transacciones.collectAsState()
     val compras by viewModel.compras.collectAsState()
     val articulos by viewModel.articulosInventario.collectAsState()
+    val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
+    val mensajeTasa by viewModel.mensajeTasa.collectAsState()
+
+    LaunchedEffect(mensajeTasa) {
+        mensajeTasa?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val articulosBajoStock = remember(articulos) { articulos.filter { it.stockActual <= it.stockMinimo } }
 
@@ -228,7 +237,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         Text("💵", fontSize = 24.sp)
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
@@ -239,18 +248,31 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (config.autoActualizarTasa) "Actualización diaria automática activa • Toca para ajustar" else "Tasa manual fijada • Toca para ajustar",
+                                text = if (actualizandoTasa) "Sincronizando con el BCV..." else "Conversión dual activa • Toca para gestionar",
                                 fontSize = 10.sp,
-                                color = SoftGray
+                                color = if (actualizandoTasa) CafeDarkBrown else SoftGray
                             )
                         }
                     }
-                    Text(
-                        text = "Cambiar",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CafeDarkBrown
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { viewModel.actualizarTasaDesdeInternet(forzar = true) },
+                            enabled = !actualizandoTasa,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            if (actualizandoTasa) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = CafeDarkBrown, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Refresh, contentDescription = "Sincronizar BCV ahora", tint = CafeDarkBrown, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                        Text(
+                            text = "Ajustes",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CafeDarkBrown
+                        )
+                    }
                 }
             }
         }

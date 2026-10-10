@@ -61,6 +61,7 @@ fun AjustesScreen(
     var showLicenciaDialog by remember { mutableStateOf(false) }
     var showHardResetDialog by remember { mutableStateOf(false) }
     var showHardResetSuccessDialog by remember { mutableStateOf(false) }
+    var hardResetFueConDatosEjemplo by remember { mutableStateOf(false) }
     var showEditarTasaDialog by remember { mutableStateOf(false) }
 
     val actualizandoTasa by viewModel.actualizandoTasa.collectAsState()
@@ -740,6 +741,7 @@ fun AjustesScreen(
             onDismiss = { showHardResetDialog = false },
             onConfirm = { conDatosEjemplo ->
                 showHardResetDialog = false
+                hardResetFueConDatosEjemplo = conDatosEjemplo
                 viewModel.ejecutarHardReset(conDatosEjemplo) {
                     showHardResetSuccessDialog = true
                 }
@@ -752,10 +754,14 @@ fun AjustesScreen(
         AlertDialog(
             onDismissRequest = { showHardResetSuccessDialog = false },
             icon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SoftGreen, modifier = Modifier.size(36.dp)) },
-            title = { Text("¡Hard Reset Completado!", fontWeight = FontWeight.Bold) },
+            title = { Text("¡Hard Reset Exitoso!", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "La base de datos ha sido restablecida con éxito. Todas las tablas quedaron limpias y preparadas para operar nuevamente con total rapidez.",
+                    text = if (hardResetFueConDatosEjemplo) {
+                        "La base de datos ha sido restablecida y se recargó el catálogo de demostración de cafetería con 10 productos de muestra, inventario y proveedores."
+                    } else {
+                        "La base de datos ha quedado 100% limpia y en blanco (0 ventas, 0 productos, 0 clientes y 0 deudas). Todo está listo para que comiences a registrar tu propio comercio."
+                    },
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -1005,10 +1011,10 @@ private fun HardResetConfirmDialog(
     onConfirm: (conDatosEjemplo: Boolean) -> Unit
 ) {
     var confirmText by remember { mutableStateOf("") }
-    var cargarDatosEjemplo by remember { mutableStateOf(true) }
+    // Por defecto FALSE para que el Hard Reset deje la base de datos limpia en blanco para el negocio real
+    var cargarDatosEjemplo by remember { mutableStateOf(false) }
 
     val palabraClave = "RESET"
-    // Validación flexible: acepta RESET o BORRAR en mayúsculas o minúsculas
     val esPalabraCorrecta = confirmText.trim().equals(palabraClave, ignoreCase = true) ||
             confirmText.trim().equals("BORRAR", ignoreCase = true)
 
@@ -1017,10 +1023,10 @@ private fun HardResetConfirmDialog(
         icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = SoftRed, modifier = Modifier.size(36.dp)) },
         title = {
             Text(
-                text = "⚠️ Confirmar Hard Reset Total",
+                text = "⚠️ Hard Reset (Restaurar de Fábrica)",
                 fontWeight = FontWeight.Bold,
                 color = SoftRed,
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         },
@@ -1032,9 +1038,8 @@ private fun HardResetConfirmDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Esta acción eliminará de forma irreversible los datos del sistema:",
+                    text = "Esta acción eliminará de forma irreversible todos los datos actuales del sistema:",
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -1045,43 +1050,86 @@ private fun HardResetConfirmDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("• Ventas, pedidos e historial comercial", fontSize = 11.sp, color = SoftRed)
-                        Text("• Cuentas por cobrar (CXC) y por pagar (CXP)", fontSize = 11.sp, color = SoftRed)
+                        Text("• Ventas, comandas e historial de facturación", fontSize = 11.sp, color = SoftRed)
+                        Text("• Cuentas por cobrar (CXC) y cuentas por pagar (CXP)", fontSize = 11.sp, color = SoftRed)
                         Text("• Clientes y Proveedores registrados", fontSize = 11.sp, color = SoftRed)
                         Text("• Inventario doble (Materias Primas y Vitrina)", fontSize = 11.sp, color = SoftRed)
-                        Text("• Recetas estipuladas y movimientos de stock", fontSize = 11.sp, color = SoftRed)
+                        Text("• Recetas estipuladas y movimientos de almacén", fontSize = 11.sp, color = SoftRed)
                     }
                 }
 
-                // Opción para restaurar con datos de ejemplo o en blanco
-                Row(
+                Text(
+                    text = "Selecciona el modo de restablecimiento:",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CafeDarkBrown
+                )
+
+                // Opción 1: En Blanco (Recomendada para negocio real)
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (!cargarDatosEjemplo) CafeBrown.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = if (!cargarDatosEjemplo) androidx.compose.foundation.BorderStroke(1.5.dp, CafeDarkBrown) else null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { cargarDatosEjemplo = !cargarDatosEjemplo },
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { cargarDatosEjemplo = false }
                 ) {
-                    Checkbox(
-                        checked = cargarDatosEjemplo,
-                        onCheckedChange = { cargarDatosEjemplo = it },
-                        colors = CheckboxDefaults.colors(checkedColor = CafeDarkBrown)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Recargar datos de ejemplo de cafetería tras el reinicio",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = !cargarDatosEjemplo,
+                            onClick = { cargarDatosEjemplo = false },
+                            colors = RadioButtonDefaults.colors(selectedColor = CafeDarkBrown)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text("Limpiar todo en Blanco (Recomendado)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Deja la base de datos 100% vacía para empezar a cargar los datos de tu propio comercio.", fontSize = 11.sp, color = SoftGray)
+                        }
+                    }
                 }
 
-                // RECUADRO DESTACADO CON LA PALABRA DE SEGURIDAD
+                // Opción 2: Con datos de demostración
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (cargarDatosEjemplo) CafeBrown.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    border = if (cargarDatosEjemplo) androidx.compose.foundation.BorderStroke(1.5.dp, CafeDarkBrown) else null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { cargarDatosEjemplo = true }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = cargarDatosEjemplo,
+                            onClick = { cargarDatosEjemplo = true },
+                            colors = RadioButtonDefaults.colors(selectedColor = CafeDarkBrown)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text("Recargar catálogo de ejemplo de cafetería", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Carga 10 productos de muestra (café, empanadas, etc.), proveedores e insumos.", fontSize = 11.sp, color = SoftGray)
+                        }
+                    }
+                }
+
+                // RECUADRO CON LA PALABRA DE SEGURIDAD CLARA Y VISIBLE
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = SoftRed.copy(alpha = 0.12f)),
+                    colors = CardDefaults.cardColors(containerColor = SoftRed.copy(alpha = 0.10f)),
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, SoftRed),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -1090,7 +1138,7 @@ private fun HardResetConfirmDialog(
                             fontWeight = FontWeight.Bold,
                             color = SoftRed
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = palabraClave,
                             fontSize = 24.sp,
@@ -1099,12 +1147,17 @@ private fun HardResetConfirmDialog(
                             letterSpacing = 4.sp,
                             color = SoftRed
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Escribe la palabra RESET para desbloquear el botón",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = { confirmText = palabraClave },
+                            colors = ButtonDefaults.buttonColors(containerColor = SoftRed),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Escribir 'RESET' automáticamente", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
 
@@ -1122,9 +1175,9 @@ private fun HardResetConfirmDialog(
                     },
                     supportingText = {
                         if (esPalabraCorrecta) {
-                            Text("✓ Palabra correcta. Ya puedes confirmar el reinicio.", color = SoftGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("✓ Palabra correcta. Ya puedes ejecutar el Hard Reset.", color = SoftGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         } else {
-                            Text("Debes escribir RESET (en mayúsculas o minúsculas)", color = SoftRed, fontSize = 11.sp)
+                            Text("Escribe la palabra RESET para desbloquear el botón", color = SoftRed, fontSize = 11.sp)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1133,21 +1186,6 @@ private fun HardResetConfirmDialog(
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("hard_reset_confirm_input")
                 )
-
-                // Botón rápido para autocompletar si se desea
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = { confirmText = palabraClave },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp), tint = SoftRed)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Autocompletar 'RESET'", fontSize = 11.sp, color = SoftRed, fontWeight = FontWeight.SemiBold)
-                    }
-                }
             }
         },
         confirmButton = {
@@ -1162,7 +1200,11 @@ private fun HardResetConfirmDialog(
                 modifier = Modifier.testTag("hard_reset_execute_button")
             ) {
                 Text(
-                    text = if (esPalabraCorrecta) "Confirmar y Borrar Todo" else "Escribe RESET para Confirmar",
+                    text = if (esPalabraCorrecta) {
+                        if (cargarDatosEjemplo) "Borrar y Cargar Datos Demo" else "Borrar Todo y Dejar en Blanco"
+                    } else {
+                        "Escribe RESET para Confirmar"
+                    },
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )

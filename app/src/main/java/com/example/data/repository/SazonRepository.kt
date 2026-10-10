@@ -221,7 +221,7 @@ class SazonRepository(
     }
 
     // --- HARD RESET DEL SISTEMA ---
-    suspend fun hardResetDatabase(reinicializarDatosEjemplo: Boolean = true) {
+    suspend fun hardResetDatabase(reinicializarDatosEjemplo: Boolean = false) {
         // 1. Borrar todas las tablas
         recetaIngredienteDao.deleteAll()
         movimientoInventarioDao.deleteAll()
@@ -234,59 +234,85 @@ class SazonRepository(
         clienteDao.deleteAll()
         configuracionDao.deleteAll()
 
-        // 2. Restaurar configuración predeterminada
-        val configDefault = ConfiguracionComercio()
+        // 2. Restaurar configuración predeterminada limpia con tasa oficial BCV y licencia DEMO de 15 días
+        val configDefault = ConfiguracionComercio(
+            nombreComercio = if (reinicializarDatosEjemplo) "Angel's Cafe" else "Mi Comercio",
+            tasaCambioBs = 875.65,
+            autoActualizarTasa = true,
+            planLicencia = "DEMO",
+            tipoLicencia = "Licencia de Prueba Demo (15 días)",
+            estadoLicencia = "DEMO",
+            fechaActivacion = System.currentTimeMillis(),
+            fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+            fueActivadaConClave = false,
+            claveLicencia = ""
+        )
         configuracionDao.insertOrUpdate(configDefault)
 
-        // 3. Si se solicita, cargar datos de demostración limpios
+        // 3. Solo si el usuario explícitamente solicitó datos de demostración, se cargan los productos de ejemplo
         if (reinicializarDatosEjemplo) {
-            seedInitialDataIfNeeded()
+            seedSampleData()
         }
     }
 
     suspend fun seedInitialDataIfNeeded() {
         val configActual = configuracionDao.getConfiguracionSync()
         if (configActual == null) {
-            val nuevaConfig = ConfiguracionComercio()
+            // Primera instalación del sistema
+            val nuevaConfig = ConfiguracionComercio(
+                tasaCambioBs = 875.65,
+                autoActualizarTasa = true,
+                planLicencia = "DEMO",
+                tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                estadoLicencia = "DEMO",
+                fechaActivacion = System.currentTimeMillis(),
+                fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                fueActivadaConClave = false,
+                claveLicencia = ""
+            )
             configuracionDao.insertOrUpdate(nuevaConfig)
-        } else {
-            var configModificada = configActual
-            // Si la tasa almacenada es la anterior obsoleta (menor a 500 Bs), migrar de inmediato a la tasa oficial real del BCV
-            if (configActual.tasaCambioBs < 500.0) {
-                configModificada = configModificada.copy(
-                    tasaCambioBs = 875.65,
-                    fechaActualizacionTasa = System.currentTimeMillis()
-                )
-            }
-            if (!configActual.fueActivadaConClave && configActual.planLicencia != "DEMO") {
-                // Migrar a licencia Demo de 15 días si no fue activada con clave maestra
-                configModificada = configModificada.copy(
-                    planLicencia = "DEMO",
-                    tipoLicencia = "Licencia de Prueba Demo (15 días)",
-                    estadoLicencia = "DEMO",
-                    fechaActivacion = System.currentTimeMillis(),
-                    fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
-                    fueActivadaConClave = false,
-                    claveLicencia = ""
-                )
-            }
-            if (configModificada != configActual) {
-                configuracionDao.insertOrUpdate(configModificada)
-            }
+            seedSampleData()
+            return
         }
 
+        // Si ya existe configuración, solo verificamos migraciones de tasa y licencia.
+        // NUNCA recargar datos de ejemplo si el usuario los eliminó o hizo un Hard Reset en blanco.
+        var configModificada = configActual
+        if (configActual.tasaCambioBs < 500.0) {
+            configModificada = configModificada.copy(
+                tasaCambioBs = 875.65,
+                fechaActualizacionTasa = System.currentTimeMillis()
+            )
+        }
+        if (!configActual.fueActivadaConClave && configActual.planLicencia != "DEMO") {
+            configModificada = configModificada.copy(
+                planLicencia = "DEMO",
+                tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                estadoLicencia = "DEMO",
+                fechaActivacion = System.currentTimeMillis(),
+                fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                fueActivadaConClave = false,
+                claveLicencia = ""
+            )
+        }
+        if (configModificada != configActual) {
+            configuracionDao.insertOrUpdate(configModificada)
+        }
+    }
+
+    private suspend fun seedSampleData() {
         if (platoDao.getCount() == 0) {
             val samplePlatos = listOf(
-                Plato(nombre = "Café Expreso ☕", precio = 1500.0, descripcion = "Café negro aromático tostado medio"),
-                Plato(nombre = "Capuccino Especial 🥛", precio = 2500.0, descripcion = "Espresso con espuma de leche sedosa"),
-                Plato(nombre = "Empanada de Carne 🥩", precio = 1800.0, descripcion = "Empanada crocante bien sazonada"),
-                Plato(nombre = "Empanada de Queso 🧀", precio = 1600.0, descripcion = "Empanada artesanal con queso derretido"),
-                Plato(nombre = "Arepa Reina Pepiada 🥑", precio = 3500.0, descripcion = "Arepa asada rellena de pollo, mayonesa y aguacate"),
-                Plato(nombre = "Arepa de Carne Mechada 🥩", precio = 3200.0, descripcion = "Arepa tradicional con carne jugosa"),
-                Plato(nombre = "Bollito Aliñado con Mantequilla 🫓", precio = 1200.0, descripcion = "Bollito de masa tierna sazonada"),
-                Plato(nombre = "Sándwich Mixto Tostado 🥪", precio = 2400.0, descripcion = "Jamón, queso derretido y mantequilla"),
-                Plato(nombre = "Desayuno Americano 🍳", precio = 4500.0, descripcion = "Huevos revueltos, tostadas, tocino y café"),
-                Plato(nombre = "Almuerzo Ejecutivo 🍲", precio = 6500.0, descripcion = "Plato principal, guarnición y bebida")
+                Plato(nombre = "Café Expreso ☕", precio = 1.50, descripcion = "Café negro aromático tostado medio"),
+                Plato(nombre = "Capuccino Especial 🥛", precio = 2.50, descripcion = "Espresso con espuma de leche sedosa"),
+                Plato(nombre = "Empanada de Carne 🥩", precio = 1.80, descripcion = "Empanada crocante bien sazonada"),
+                Plato(nombre = "Empanada de Queso 🧀", precio = 1.60, descripcion = "Empanada artesanal con queso derretido"),
+                Plato(nombre = "Arepa Reina Pepiada 🥑", precio = 3.50, descripcion = "Arepa asada rellena de pollo, mayonesa y aguacate"),
+                Plato(nombre = "Arepa de Carne Mechada 🥩", precio = 3.20, descripcion = "Arepa tradicional con carne jugosa"),
+                Plato(nombre = "Bollito Aliñado con Mantequilla 🫓", precio = 1.20, descripcion = "Bollito de masa tierna sazonada"),
+                Plato(nombre = "Sándwich Mixto Tostado 🥪", precio = 2.40, descripcion = "Jamón, queso derretido y mantequilla"),
+                Plato(nombre = "Desayuno Americano 🍳", precio = 4.50, descripcion = "Huevos revueltos, tostadas, tocino y café"),
+                Plato(nombre = "Almuerzo Ejecutivo 🍲", precio = 6.50, descripcion = "Plato principal, guarnición y bebida")
             )
             platoDao.insertPlatos(samplePlatos)
         }
@@ -306,7 +332,7 @@ class SazonRepository(
                             proveedorNombre = p.nombre,
                             fecha = System.currentTimeMillis() - 86400000L * 4,
                             detalle = "Sacos de harina de maíz + Café en grano + Azúcar",
-                            montoTotal = 18500.0,
+                            montoTotal = 18.50,
                             condicion = "CREDITO"
                         )
                     )
@@ -317,7 +343,7 @@ class SazonRepository(
                             proveedorNombre = p.nombre,
                             fecha = System.currentTimeMillis() - 86400000L * 2,
                             detalle = "Queso blanco paisa (10kg) + Leche pasteurizada",
-                            montoTotal = 12000.0,
+                            montoTotal = 12.00,
                             condicion = "CREDITO"
                         )
                     )
@@ -326,7 +352,7 @@ class SazonRepository(
                             proveedorId = provId,
                             fecha = System.currentTimeMillis() - 86400000L,
                             detalle = "Abono transferencia Bancaria",
-                            monto = 5000.0
+                            monto = 5.00
                         )
                     )
                 }
@@ -343,7 +369,7 @@ class SazonRepository(
                 unidadMedida = "Kg",
                 stockActual = 30.0,
                 stockMinimo = 10.0,
-                costoUnitario = 450.0,
+                costoUnitario = 0.45,
                 precioVenta = 0.0,
                 notas = "Bolsas de 1kg para empanadas, arepas y bollitos"
             )
@@ -355,7 +381,7 @@ class SazonRepository(
                 unidadMedida = "Kg",
                 stockActual = 12.0,
                 stockMinimo = 5.0,
-                costoUnitario = 2200.0,
+                costoUnitario = 2.20,
                 precioVenta = 0.0,
                 notas = "Relleno para empanadas y almuerzos"
             )
@@ -367,7 +393,7 @@ class SazonRepository(
                 unidadMedida = "Kg",
                 stockActual = 15.0,
                 stockMinimo = 6.0,
-                costoUnitario = 1800.0,
+                costoUnitario = 1.80,
                 precioVenta = 0.0,
                 notas = "Relleno para empanadas, arepas y bollos"
             )
@@ -379,7 +405,7 @@ class SazonRepository(
                 unidadMedida = "Kg",
                 stockActual = 14.0,
                 stockMinimo = 4.0,
-                costoUnitario = 1200.0,
+                costoUnitario = 1.20,
                 precioVenta = 0.0,
                 notas = "Para moler en tolva de cafetera espresso"
             )
@@ -391,7 +417,7 @@ class SazonRepository(
                 unidadMedida = "Litro",
                 stockActual = 20.0,
                 stockMinimo = 8.0,
-                costoUnitario = 500.0,
+                costoUnitario = 0.50,
                 precioVenta = 0.0,
                 notas = "Para capuccinos y café con leche"
             )
@@ -403,7 +429,7 @@ class SazonRepository(
                 unidadMedida = "Litro",
                 stockActual = 18.0,
                 stockMinimo = 5.0,
-                costoUnitario = 750.0,
+                costoUnitario = 0.75,
                 precioVenta = 0.0,
                 notas = "Para freidora de empanadas"
             )
@@ -446,8 +472,8 @@ class SazonRepository(
                 unidadMedida = "Unidad",
                 stockActual = 25.0,
                 stockMinimo = 10.0,
-                costoUnitario = 650.0,
-                precioVenta = 1800.0,
+                costoUnitario = 0.65,
+                precioVenta = 1.80,
                 notas = "Listas en vitrina caliente para despacho"
             )
             val ptEmpanadaQueso = ArticuloInventario(
@@ -458,8 +484,8 @@ class SazonRepository(
                 unidadMedida = "Unidad",
                 stockActual = 20.0,
                 stockMinimo = 10.0,
-                costoUnitario = 580.0,
-                precioVenta = 1600.0,
+                costoUnitario = 0.58,
+                precioVenta = 1.60,
                 notas = "En vitrina caliente recién fritas"
             )
             val ptArepas = ArticuloInventario(
@@ -470,8 +496,8 @@ class SazonRepository(
                 unidadMedida = "Unidad",
                 stockActual = 15.0,
                 stockMinimo = 8.0,
-                costoUnitario = 400.0,
-                precioVenta = 3200.0,
+                costoUnitario = 0.40,
+                precioVenta = 3.20,
                 notas = "Asadas en budare listas para rellenar"
             )
             val ptBollitos = ArticuloInventario(
@@ -482,8 +508,8 @@ class SazonRepository(
                 unidadMedida = "Unidad",
                 stockActual = 18.0,
                 stockMinimo = 6.0,
-                costoUnitario = 300.0,
-                precioVenta = 1200.0,
+                costoUnitario = 0.30,
+                precioVenta = 1.20,
                 notas = "Hervidos al vapor calientes"
             )
             val ptCafeTerminado = ArticuloInventario(
@@ -494,8 +520,8 @@ class SazonRepository(
                 unidadMedida = "Taza",
                 stockActual = 50.0,
                 stockMinimo = 15.0,
-                costoUnitario = 200.0,
-                precioVenta = 1500.0,
+                costoUnitario = 0.20,
+                precioVenta = 1.50,
                 notas = "Porciones disponibles para preparar al instante"
             )
 

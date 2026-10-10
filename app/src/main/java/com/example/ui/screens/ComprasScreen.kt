@@ -114,7 +114,7 @@ fun ComprasScreen(
                         text = "Equivalente: ${FormatUtils.formatBs(totalCompras, config.tasaCambioBs)}",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CafeDarkBrown
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -234,7 +234,7 @@ fun ComprasScreen(
                                         text = FormatUtils.formatBs(c.montoTotal, config.tasaCambioBs),
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 11.sp,
-                                        color = CafeDarkBrown
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     IconButton(
                                         onClick = { compraToDelete = c },

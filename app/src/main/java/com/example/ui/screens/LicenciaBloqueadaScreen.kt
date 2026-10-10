@@ -125,7 +125,7 @@ fun LicenciaBloqueadaScreen(
                         text = "Activar Licencia Comercial",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = CafeDarkBrown
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(

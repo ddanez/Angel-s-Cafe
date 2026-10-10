@@ -119,7 +119,7 @@ fun DashboardScreen(
                                     text = "Licencia Demo: ${config.diasRestantesLicencia()} días restantes (de 15)",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = CafeDarkBrown
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Vence: ${FormatUtils.formatDateOnly(config.fechaVencimientoLicencia)}. Toque para activar licencia comercial.",
@@ -130,13 +130,13 @@ fun DashboardScreen(
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = CafeDarkBrown
+                            color = MaterialTheme.colorScheme.primary
                         ) {
                             Text(
                                 text = "Activar",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = SmoothBeige,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                             )
                         }
@@ -263,7 +263,7 @@ fun DashboardScreen(
                             Text(
                                 text = if (actualizandoTasa) "Sincronizando con el BCV..." else "Conversión dual activa • Toca para gestionar",
                                 fontSize = 10.sp,
-                                color = if (actualizandoTasa) CafeDarkBrown else SoftGray
+                                color = if (actualizandoTasa) MaterialTheme.colorScheme.primary else SoftGray
                             )
                         }
                     }
@@ -274,16 +274,16 @@ fun DashboardScreen(
                             modifier = Modifier.size(36.dp)
                         ) {
                             if (actualizandoTasa) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = CafeDarkBrown, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                             } else {
-                                Icon(Icons.Default.Refresh, contentDescription = "Sincronizar BCV ahora", tint = CafeDarkBrown, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Refresh, contentDescription = "Sincronizar BCV ahora", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             }
                         }
                         Text(
                             text = "Ajustes",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CafeDarkBrown
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -339,7 +339,7 @@ fun DashboardScreen(
                     Text(
                         text = "Abrir ☰",
                         fontWeight = FontWeight.Bold,
-                        color = CafeDarkBrown,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 13.sp
                     )
                 }
@@ -509,7 +509,7 @@ fun DashboardScreen(
                         text = "Ver Stock ➔",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CafeDarkBrown
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

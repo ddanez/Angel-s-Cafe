@@ -522,13 +522,17 @@ class SazonViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // --- HARD RESET ---
-    fun ejecutarHardReset(reinicializarDatosEjemplo: Boolean, onCompletado: () -> Unit) {
+    fun ejecutarHardReset(modo: String = "BLANCO", onCompletado: () -> Unit) {
         viewModelScope.launch {
             _selectedClienteId.value = null
             limpiarCarrito()
-            repository.hardResetDatabase(reinicializarDatosEjemplo)
+            repository.hardResetDatabase(modo)
             onCompletado()
         }
+    }
+
+    fun ejecutarHardReset(reinicializarDatosEjemplo: Boolean, onCompletado: () -> Unit) {
+        ejecutarHardReset(if (reinicializarDatosEjemplo) "DEMO" else "BLANCO", onCompletado)
     }
 
     // --- LICENCIAMIENTO ---

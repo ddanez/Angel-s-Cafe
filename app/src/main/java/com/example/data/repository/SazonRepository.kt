@@ -221,38 +221,80 @@ class SazonRepository(
     }
 
     // --- HARD RESET DEL SISTEMA ---
-    suspend fun hardResetDatabase(reinicializarDatosEjemplo: Boolean = false) {
-        // 1. Borrar todas las tablas
-        recetaIngredienteDao.deleteAll()
-        movimientoInventarioDao.deleteAll()
-        inventarioDao.deleteAll()
-        pagoProveedorDao.deleteAll()
-        compraDao.deleteAll()
-        transaccionDao.deleteAll()
-        proveedorDao.deleteAll()
-        platoDao.deleteAll()
-        clienteDao.deleteAll()
-        configuracionDao.deleteAll()
+    suspend fun hardResetDatabase(modo: String = "BLANCO") {
+        when (modo) {
+            "SOLO_OPERACIONES" -> {
+                // Borra solo transacciones, compras, pagos a proveedores y movimientos de almacén,
+                // pero CONSERVA el catálogo de productos, inventario, clientes y proveedores
+                transaccionDao.deleteAll()
+                compraDao.deleteAll()
+                pagoProveedorDao.deleteAll()
+                movimientoInventarioDao.deleteAll()
+            }
+            "DEMO" -> {
+                // 1. Borrar todas las tablas
+                recetaIngredienteDao.deleteAll()
+                movimientoInventarioDao.deleteAll()
+                inventarioDao.deleteAll()
+                pagoProveedorDao.deleteAll()
+                compraDao.deleteAll()
+                transaccionDao.deleteAll()
+                proveedorDao.deleteAll()
+                platoDao.deleteAll()
+                clienteDao.deleteAll()
+                configuracionDao.deleteAll()
 
-        // 2. Restaurar configuración predeterminada limpia con tasa oficial BCV y licencia DEMO de 15 días
-        val configDefault = ConfiguracionComercio(
-            nombreComercio = if (reinicializarDatosEjemplo) "Angel's Cafe" else "Mi Comercio",
-            tasaCambioBs = 875.65,
-            autoActualizarTasa = true,
-            planLicencia = "DEMO",
-            tipoLicencia = "Licencia de Prueba Demo (15 días)",
-            estadoLicencia = "DEMO",
-            fechaActivacion = System.currentTimeMillis(),
-            fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
-            fueActivadaConClave = false,
-            claveLicencia = ""
-        )
-        configuracionDao.insertOrUpdate(configDefault)
+                // 2. Restaurar configuración predeterminada con tasa oficial BCV
+                val configDefault = ConfiguracionComercio(
+                    nombreComercio = "Angel's Cafe",
+                    tasaCambioBs = 875.65,
+                    autoActualizarTasa = true,
+                    planLicencia = "DEMO",
+                    tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                    estadoLicencia = "DEMO",
+                    fechaActivacion = System.currentTimeMillis(),
+                    fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                    fueActivadaConClave = false,
+                    claveLicencia = ""
+                )
+                configuracionDao.insertOrUpdate(configDefault)
 
-        // 3. Solo si el usuario explícitamente solicitó datos de demostración, se cargan los productos de ejemplo
-        if (reinicializarDatosEjemplo) {
-            seedSampleData()
+                // 3. Cargar catálogo demo de cafetería
+                seedSampleData()
+            }
+            else -> { // "BLANCO"
+                // 1. Borrar todas las tablas
+                recetaIngredienteDao.deleteAll()
+                movimientoInventarioDao.deleteAll()
+                inventarioDao.deleteAll()
+                pagoProveedorDao.deleteAll()
+                compraDao.deleteAll()
+                transaccionDao.deleteAll()
+                proveedorDao.deleteAll()
+                platoDao.deleteAll()
+                clienteDao.deleteAll()
+                configuracionDao.deleteAll()
+
+                // 2. Restaurar configuración predeterminada limpia con tasa oficial BCV y licencia DEMO de 15 días
+                val configDefault = ConfiguracionComercio(
+                    nombreComercio = "Mi Comercio",
+                    tasaCambioBs = 875.65,
+                    autoActualizarTasa = true,
+                    planLicencia = "DEMO",
+                    tipoLicencia = "Licencia de Prueba Demo (15 días)",
+                    estadoLicencia = "DEMO",
+                    fechaActivacion = System.currentTimeMillis(),
+                    fechaVencimientoLicencia = System.currentTimeMillis() + (15L * 24L * 60L * 60L * 1000L),
+                    fueActivadaConClave = false,
+                    claveLicencia = ""
+                )
+                configuracionDao.insertOrUpdate(configDefault)
+            }
         }
+    }
+
+    suspend fun hardResetDatabase(reinicializarDatosEjemplo: Boolean) {
+        hardResetDatabase(if (reinicializarDatosEjemplo) "DEMO" else "BLANCO")
     }
 
     suspend fun seedInitialDataIfNeeded() {

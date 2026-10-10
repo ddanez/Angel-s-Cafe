@@ -242,7 +242,7 @@ fun VentasScreen(
                                         text = FormatUtils.formatDual(plato.precio, config.tasaCambioBs, config.monedaSimbolo),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = CafeDarkBrown
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
 
@@ -307,7 +307,7 @@ fun VentasScreen(
                                     text = "Equivalente: ${FormatUtils.formatBs(totalVentasPeriodo, config.tasaCambioBs)}",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = CafeDarkBrown
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
@@ -417,7 +417,7 @@ fun VentasScreen(
                                                 text = FormatUtils.formatBs(venta.montoTotal, config.tasaCambioBs),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = CafeDarkBrown
+                                                color = MaterialTheme.colorScheme.primary
                                             )
                                         }
 
@@ -503,6 +503,7 @@ TOTAL EN BOLÍVARES: ${FormatUtils.formatBs(totalCarrito, config.tasaCambioBs)}
                         text = ticket,
                         fontSize = 12.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
@@ -574,7 +575,7 @@ private fun CheckoutVentaDialog(
                             text = "Equivalente en Bolívares: ${FormatUtils.formatBs(total, tasaCambioBs)}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CafeDarkBrown
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "(Tasa: 1 USD = Bs. ${String.format(java.util.Locale.US, "%.2f", tasaCambioBs)})",

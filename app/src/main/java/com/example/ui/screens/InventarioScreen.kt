@@ -214,7 +214,7 @@ fun InventarioScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Prod. Terminado", fontSize = 11.sp, color = CafeDarkBrown, fontWeight = FontWeight.Bold)
+                                Text("Prod. Terminado", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 Text("🥐", fontSize = 12.sp)
                             }
                             Spacer(modifier = Modifier.height(4.dp))
@@ -253,7 +253,7 @@ fun InventarioScreen(
                                 FormatUtils.formatBs(totalValor, config.tasaCambioBs),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = CafeDarkBrown
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -263,8 +263,9 @@ fun InventarioScreen(
             // Explicativo Banner de Proceso (Materia Prima -> Receta -> Producto Terminado)
             item {
                 Surface(
-                    color = CafeBrown.copy(alpha = 0.08f),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -278,7 +279,7 @@ fun InventarioScreen(
                                 text = "Gestión con Descuento Automático",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = CafeDarkBrown
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = "Al preparar empanadas, arepas o café para la vitrina, el botón 'Elaborar' descuenta los insumos de materia prima según su receta.",
@@ -449,7 +450,7 @@ fun InventarioScreen(
                                 if (soloBajoStock) {
                                     Spacer(modifier = Modifier.height(12.dp))
                                     TextButton(onClick = { soloBajoStock = false }) {
-                                        Text("Mostrar todos los artículos", color = CafeDarkBrown)
+                                        Text("Mostrar todos los artículos", color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
                             }
@@ -768,7 +769,7 @@ fun ArticuloDualCard(
                                 text = "📜 Receta estipulada (${ingredientesReceta.size} ingredientes):",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = CafeDarkBrown
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = "Modificar",
@@ -824,7 +825,7 @@ fun ArticuloDualCard(
                         FormatUtils.formatBs(montoPrincipal, tasaCambioBs),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = CafeDarkBrown
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Column {
@@ -843,7 +844,7 @@ fun ArticuloDualCard(
                         FormatUtils.formatCurrency(valorAlmacen, monedaSimbolo),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CafeDarkBrown
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         FormatUtils.formatBs(valorAlmacen, tasaCambioBs),
@@ -1424,7 +1425,7 @@ fun MovimientoStockDialog(
                             "${formatQty(nuevoStockEstimado)} ${articulo.unidadMedida}",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 14.sp,
-                            color = CafeDarkBrown
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -1793,7 +1794,7 @@ fun ElaborarProductoDialog(
                                 "${formatQty(productoTerminado.stockActual + cantElaborar)} ${productoTerminado.unidadMedida}",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = CafeDarkBrown
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }

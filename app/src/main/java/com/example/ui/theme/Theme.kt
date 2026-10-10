@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = CafeBrown,
@@ -17,6 +18,8 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = LightText,
     surface = CocoaCard,
     onSurface = LightText,
+    surfaceVariant = Color(0xFF2D2522),
+    onSurfaceVariant = SmoothBeige,
     error = SoftRed,
     onError = LightText
 )
@@ -24,14 +27,16 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = CafeDarkBrown,
     onPrimary = LightText,
-    primaryContainer = CafeBrown,
+    primaryContainer = CafeBrown.copy(alpha = 0.25f),
     onPrimaryContainer = DarkText,
     secondary = GoldenCrema,
     onSecondary = DarkText,
     background = SmoothBeige,
     onBackground = DarkText,
-    surface = SmoothBeige,
+    surface = Color(0xFFFAF7F5),
     onSurface = DarkText,
+    surfaceVariant = Color(0xFFE4DAD4),
+    onSurfaceVariant = DarkText,
     error = SoftRed,
     onError = LightText
 )

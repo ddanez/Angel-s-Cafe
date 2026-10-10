@@ -124,7 +124,7 @@ fun MainAppScaffold(
                                         text = "DEMO: ${config.diasRestantesLicencia()}d restantes",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = CafeDarkBrown,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }

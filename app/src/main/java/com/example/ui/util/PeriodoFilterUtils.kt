@@ -235,8 +235,10 @@ fun SelectorPeriodoBar(
                         }
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = CafeDarkBrown,
-                        selectedLabelColor = SmoothBeige
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        labelColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.testTag("filtro_periodo_${tipo.name.lowercase()}")
                 )
@@ -245,8 +247,9 @@ fun SelectorPeriodoBar(
 
         // Barra informativa de período actual activo
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
             shape = RoundedCornerShape(8.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
@@ -269,15 +272,15 @@ fun SelectorPeriodoBar(
                     Icon(
                         imageVector = Icons.Default.DateRange,
                         contentDescription = null,
-                        tint = CafeBrown,
-                        modifier = Modifier.size(15.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = filtro.textoDescriptivo,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -286,7 +289,7 @@ fun SelectorPeriodoBar(
                         onClick = { mostrarDialogoRango = true },
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("Modificar", fontSize = 11.sp, color = CafeDarkBrown, fontWeight = FontWeight.Bold)
+                        Text("Modificar", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -344,7 +347,7 @@ fun DialogoSelectorRangoFechas(
                 )
 
                 // Botones de presets rápidos
-                Text("Accesos rápidos:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = CafeDarkBrown)
+                Text("Accesos rápidos:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -101,7 +101,7 @@ fun CxpScreen(
                     text = "Equivalente: ${FormatUtils.formatBs(totalCxp, config.tasaCambioBs)}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CafeDarkBrown
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -292,7 +292,7 @@ fun CxpScreen(
                             text = FormatUtils.formatBs(totalPagadoPeriodo, config.tasaCambioBs),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = CafeDarkBrown
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                     Text(

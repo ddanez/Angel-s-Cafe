@@ -150,6 +150,9 @@ interface InventarioDao {
     @Query("SELECT * FROM inventario WHERE id = :id")
     suspend fun getArticuloById(id: Int): ArticuloInventario?
 
+    @Query("SELECT * FROM inventario ORDER BY nombre ASC")
+    suspend fun getAllArticulosList(): List<ArticuloInventario>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticulo(articulo: ArticuloInventario): Long
 

@@ -340,6 +340,7 @@ class SazonRepository(
         if (configModificada != configActual) {
             configuracionDao.insertOrUpdate(configModificada)
         }
+        asegurarRecetaEmpanadasPollo()
     }
 
     private suspend fun seedSampleData() {
@@ -475,6 +476,18 @@ class SazonRepository(
                 precioVenta = 0.0,
                 notas = "Para freidora de empanadas"
             )
+            val mpPollo = ArticuloInventario(
+                codigo = "MP-007",
+                nombre = "Pollo Mechado Guisado",
+                tipoInventario = "MATERIA_PRIMA",
+                categoria = "Materia Prima",
+                unidadMedida = "Kg",
+                stockActual = 12.0,
+                stockMinimo = 4.0,
+                costoUnitario = 1.90,
+                precioVenta = 0.0,
+                notas = "Pechuga de pollo mechada y sazonada para relleno de empanadas"
+            )
 
             val idHarina = inventarioDao.insertArticulo(mpHarina).toInt()
             val idCarne = inventarioDao.insertArticulo(mpCarne).toInt()
@@ -482,6 +495,7 @@ class SazonRepository(
             val idCafeGrano = inventarioDao.insertArticulo(mpCafeGrano).toInt()
             val idLeche = inventarioDao.insertArticulo(mpLeche).toInt()
             val idAceite = inventarioDao.insertArticulo(mpAceite).toInt()
+            val idPollo = inventarioDao.insertArticulo(mpPollo).toInt()
 
             listOf(
                 mpHarina.copy(id = idHarina),
@@ -489,7 +503,8 @@ class SazonRepository(
                 mpQueso.copy(id = idQueso),
                 mpCafeGrano.copy(id = idCafeGrano),
                 mpLeche.copy(id = idLeche),
-                mpAceite.copy(id = idAceite)
+                mpAceite.copy(id = idAceite),
+                mpPollo.copy(id = idPollo)
             ).forEach { art ->
                 movimientoInventarioDao.insertMovimiento(
                     MovimientoInventario(
@@ -566,19 +581,33 @@ class SazonRepository(
                 precioVenta = 1.50,
                 notas = "Porciones disponibles para preparar al instante"
             )
+            val ptEmpanadaPollo = ArticuloInventario(
+                codigo = "PT-006",
+                nombre = "Empanadas de Pollo (Vitrina)",
+                tipoInventario = "PRODUCTO_TERMINADO",
+                categoria = "Empanadas y Frituras",
+                unidadMedida = "Unidad",
+                stockActual = 20.0,
+                stockMinimo = 10.0,
+                costoUnitario = 0.60,
+                precioVenta = 1.80,
+                notas = "Listas en vitrina caliente para despacho"
+            )
 
             val idPtEmpCarne = inventarioDao.insertArticulo(ptEmpanadaCarne).toInt()
             val idPtEmpQueso = inventarioDao.insertArticulo(ptEmpanadaQueso).toInt()
             val idPtArepas = inventarioDao.insertArticulo(ptArepas).toInt()
             val idPtBollitos = inventarioDao.insertArticulo(ptBollitos).toInt()
             val idPtCafe = inventarioDao.insertArticulo(ptCafeTerminado).toInt()
+            val idPtEmpPollo = inventarioDao.insertArticulo(ptEmpanadaPollo).toInt()
 
             listOf(
                 ptEmpanadaCarne.copy(id = idPtEmpCarne),
                 ptEmpanadaQueso.copy(id = idPtEmpQueso),
                 ptArepas.copy(id = idPtArepas),
                 ptBollitos.copy(id = idPtBollitos),
-                ptCafeTerminado.copy(id = idPtCafe)
+                ptCafeTerminado.copy(id = idPtCafe),
+                ptEmpanadaPollo.copy(id = idPtEmpPollo)
             ).forEach { art ->
                 movimientoInventarioDao.insertMovimiento(
                     MovimientoInventario(
@@ -596,6 +625,28 @@ class SazonRepository(
 
             // RECETAS ESTIPULADAS (Materia prima requerida por 1 unidad de producto terminado)
             val recetas = listOf(
+                // Receta Empanada de Pollo: 0.08 kg de Harina, 0.06 kg de Pollo, 0.01 L Aceite
+                RecetaIngrediente(
+                    productoTerminadoId = idPtEmpPollo,
+                    materiaPrimaId = idHarina,
+                    materiaPrimaNombre = "Harina de Maíz Precocida",
+                    cantidadPorUnidad = 0.08,
+                    unidadMedida = "Kg"
+                ),
+                RecetaIngrediente(
+                    productoTerminadoId = idPtEmpPollo,
+                    materiaPrimaId = idPollo,
+                    materiaPrimaNombre = "Pollo Mechado Guisado",
+                    cantidadPorUnidad = 0.06,
+                    unidadMedida = "Kg"
+                ),
+                RecetaIngrediente(
+                    productoTerminadoId = idPtEmpPollo,
+                    materiaPrimaId = idAceite,
+                    materiaPrimaNombre = "Aceite Vegetal para Freír",
+                    cantidadPorUnidad = 0.01,
+                    unidadMedida = "Litro"
+                ),
                 // Receta Empanada de Carne: 0.08 kg de Harina, 0.06 kg de Carne
                 RecetaIngrediente(
                     productoTerminadoId = idPtEmpCarne,
@@ -652,6 +703,123 @@ class SazonRepository(
                 )
             )
             recetaIngredienteDao.insertIngredientes(recetas)
+        }
+    }
+
+    /**
+     * Asegura que el producto terminado 'Empanadas de Pollo (Vitrina)', la materia prima
+     * 'Pollo Mechado Guisado' y su receta estipulada base para 1 empanada estén disponibles en la base de datos.
+     */
+    suspend fun asegurarRecetaEmpanadasPollo() {
+        val articulos = inventarioDao.getAllArticulosList()
+        if (articulos.isEmpty()) return
+
+        val mpHarina = articulos.find { it.tipoInventario == "MATERIA_PRIMA" && it.nombre.contains("Harina", ignoreCase = true) }
+        var mpPollo = articulos.find { it.tipoInventario == "MATERIA_PRIMA" && it.nombre.contains("Pollo", ignoreCase = true) }
+        val mpAceite = articulos.find { it.tipoInventario == "MATERIA_PRIMA" && it.nombre.contains("Aceite", ignoreCase = true) }
+        var ptPollo = articulos.find { it.tipoInventario == "PRODUCTO_TERMINADO" && it.nombre.contains("Pollo", ignoreCase = true) }
+
+        if (mpPollo == null) {
+            val nuevoId = inventarioDao.insertArticulo(
+                ArticuloInventario(
+                    codigo = "MP-007",
+                    nombre = "Pollo Mechado Guisado",
+                    tipoInventario = "MATERIA_PRIMA",
+                    categoria = "Materia Prima",
+                    unidadMedida = "Kg",
+                    stockActual = 12.0,
+                    stockMinimo = 4.0,
+                    costoUnitario = 1.90,
+                    precioVenta = 0.0,
+                    notas = "Pechuga de pollo mechada y sazonada para relleno de empanadas"
+                )
+            ).toInt()
+            mpPollo = inventarioDao.getArticuloById(nuevoId)
+            if (mpPollo != null) {
+                movimientoInventarioDao.insertMovimiento(
+                    MovimientoInventario(
+                        articuloId = mpPollo.id,
+                        articuloNombre = mpPollo.nombre,
+                        tipo = "ENTRADA",
+                        cantidad = mpPollo.stockActual,
+                        stockAnterior = 0.0,
+                        stockNuevo = mpPollo.stockActual,
+                        motivo = "Carga inicial de materia prima",
+                        fecha = System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+
+        if (ptPollo == null) {
+            val nuevoIdPt = inventarioDao.insertArticulo(
+                ArticuloInventario(
+                    codigo = "PT-006",
+                    nombre = "Empanadas de Pollo (Vitrina)",
+                    tipoInventario = "PRODUCTO_TERMINADO",
+                    categoria = "Empanadas y Frituras",
+                    unidadMedida = "Unidad",
+                    stockActual = 20.0,
+                    stockMinimo = 10.0,
+                    costoUnitario = 0.60,
+                    precioVenta = 1.80,
+                    notas = "Listas en vitrina caliente para despacho"
+                )
+            ).toInt()
+            ptPollo = inventarioDao.getArticuloById(nuevoIdPt)
+            if (ptPollo != null) {
+                movimientoInventarioDao.insertMovimiento(
+                    MovimientoInventario(
+                        articuloId = ptPollo.id,
+                        articuloNombre = ptPollo.nombre,
+                        tipo = "PRODUCCION",
+                        cantidad = ptPollo.stockActual,
+                        stockAnterior = 0.0,
+                        stockNuevo = ptPollo.stockActual,
+                        motivo = "Lote inicial pasado a vitrina de ventas",
+                        fecha = System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+
+        if (ptPollo != null && mpPollo != null) {
+            val recetasExistentes = recetaIngredienteDao.getIngredientesByProductoList(ptPollo.id)
+            if (recetasExistentes.isEmpty()) {
+                val ingredientes = mutableListOf<RecetaIngrediente>()
+                if (mpHarina != null) {
+                    ingredientes.add(
+                        RecetaIngrediente(
+                            productoTerminadoId = ptPollo.id,
+                            materiaPrimaId = mpHarina.id,
+                            materiaPrimaNombre = mpHarina.nombre,
+                            cantidadPorUnidad = 0.08,
+                            unidadMedida = mpHarina.unidadMedida
+                        )
+                    )
+                }
+                ingredientes.add(
+                    RecetaIngrediente(
+                        productoTerminadoId = ptPollo.id,
+                        materiaPrimaId = mpPollo.id,
+                        materiaPrimaNombre = mpPollo.nombre,
+                        cantidadPorUnidad = 0.06,
+                        unidadMedida = mpPollo.unidadMedida
+                    )
+                )
+                if (mpAceite != null) {
+                    ingredientes.add(
+                        RecetaIngrediente(
+                            productoTerminadoId = ptPollo.id,
+                            materiaPrimaId = mpAceite.id,
+                            materiaPrimaNombre = mpAceite.nombre,
+                            cantidadPorUnidad = 0.01,
+                            unidadMedida = mpAceite.unidadMedida
+                        )
+                    )
+                }
+                recetaIngredienteDao.insertIngredientes(ingredientes)
+            }
         }
     }
 }

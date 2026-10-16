@@ -76,6 +76,7 @@ fun InventarioScreen(
         when (selectedTab) {
             0 -> materiasPrimas
             1 -> productosTerminados
+            2 -> productosTerminados
             else -> articulos
         }
     }
@@ -123,9 +124,17 @@ fun InventarioScreen(
             }
     }
 
+    val filteredProductosParaReceta = remember(productosTerminados, searchQuery) {
+        if (searchQuery.isBlank()) productosTerminados
+        else productosTerminados.filter {
+            it.nombre.contains(searchQuery, ignoreCase = true) ||
+            it.categoria.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     Scaffold(
         floatingActionButton = {
-            if (selectedTab == 0 || selectedTab == 1) {
+            if (selectedTab == 0 || selectedTab == 1 || selectedTab == 2) {
                 FloatingActionButton(
                     onClick = {
                         initialTipoForNewArticle = if (selectedTab == 0) "MATERIA_PRIMA" else "PRODUCTO_TERMINADO"
@@ -292,12 +301,13 @@ fun InventarioScreen(
                 }
             }
 
-            // Tabs Principales: 1. Materia Prima | 2. Producto Terminado | 3. Historial
+            // Tabs Principales: 0. Materia Prima | 1. Vitrina | 2. Recetas | 3. Kárdex
             item {
-                TabRow(
+                ScrollableTabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = CafeDarkBrown,
+                    edgePadding = 0.dp,
                     modifier = Modifier.clip(RoundedCornerShape(12.dp))
                 ) {
                     Tab(
@@ -307,9 +317,7 @@ fun InventarioScreen(
                             selectedCategoryFilter = "Todos"
                         },
                         text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🌾 Materia Prima (${materiasPrimas.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
+                            Text("🌾 Insumos (${materiasPrimas.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         },
                         modifier = Modifier.testTag("inventario_tab_materia_prima")
                     )
@@ -320,19 +328,27 @@ fun InventarioScreen(
                             selectedCategoryFilter = "Todos"
                         },
                         text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🥐 Prod. Terminado (${productosTerminados.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
+                            Text("🥐 Vitrina (${productosTerminados.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         },
                         modifier = Modifier.testTag("inventario_tab_producto_terminado")
                     )
                     Tab(
                         selected = selectedTab == 2,
-                        onClick = { selectedTab = 2 },
+                        onClick = {
+                            selectedTab = 2
+                            selectedCategoryFilter = "Todos"
+                        },
                         text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("📋 Historial (${movimientos.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
+                            val countRecetas = productosTerminados.count { pt -> recetas.any { it.productoTerminadoId == pt.id } }
+                            Text("📜 Recetas ($countRecetas)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        },
+                        modifier = Modifier.testTag("inventario_tab_recetas")
+                    )
+                    Tab(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        text = {
+                            Text("📋 Kárdex (${movimientos.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         },
                         modifier = Modifier.testTag("inventario_tab_movimientos")
                     )
@@ -351,8 +367,9 @@ fun InventarioScreen(
                         placeholder = {
                             Text(
                                 when (selectedTab) {
-                                    0 -> "Buscar harina, carne, leche, café en grano..."
+                                    0 -> "Buscar harina, carne, pollo, leche, café en grano..."
                                     1 -> "Buscar empanadas, arepas, vitrina..."
+                                    2 -> "Buscar receta o producto formulado..."
                                     else -> "Buscar en historial de movimientos..."
                                 }
                             )
@@ -475,8 +492,101 @@ fun InventarioScreen(
                         )
                     }
                 }
+            } else if (selectedTab == 2) {
+                // Tab 2: ÁREA DE RECETAS Y FORMULACIÓN
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CafeBrown.copy(alpha = 0.35f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("📜", fontSize = 24.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            "Área de Recetas y Formulación",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            "Formulación base para 1 unidad de producto",
+                                            fontSize = 11.sp,
+                                            color = CafeBrown,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Define la receta con los ingredientes necesarios para elaborar exactamente 1 unidad (ej: 1 empanada de pollo). Cuando pases un lote a la vitrina (ej: 20 empanadas), el sistema multiplica automáticamente y descuenta la materia prima exacta del inventario.",
+                                fontSize = 12.sp,
+                                color = SoftGray,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+
+                if (filteredProductosParaReceta.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("📜", fontSize = 42.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Sin Productos en Vitrina",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Para estipular una receta, primero debes registrar productos elaborados de vitrina (como empanadas, arepas, bollitos) en la pestaña Vitrina.",
+                                    fontSize = 13.sp,
+                                    color = SoftGray,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    items(filteredProductosParaReceta, key = { "receta_${it.id}" }) { pt ->
+                        val ingredientesProducto = remember(recetas, pt.id) {
+                            recetas.filter { it.productoTerminadoId == pt.id }
+                        }
+                        RecetaAreaCard(
+                            productoTerminado = pt,
+                            ingredientesReceta = ingredientesProducto,
+                            materiasPrimas = materiasPrimas,
+                            monedaSimbolo = config.monedaSimbolo,
+                            tasaCambioBs = config.tasaCambioBs,
+                            onEditarReceta = { productForRecipe = pt },
+                            onElaborarParaVitrina = { productForElaborate = pt }
+                        )
+                    }
+                }
             } else {
-                // Tab 2: Historial de Movimientos / Kárdex con filtro por período
+                // Tab 3: Historial de Movimientos / Kárdex con filtro por período
                 item {
                     SelectorPeriodoBar(
                         filtro = filtroPeriodoKardex,
@@ -1453,7 +1563,246 @@ fun MovimientoStockDialog(
     )
 }
 
-// DIALOG: Configuración de Receta para Producto Terminado
+// CARD COMPACTA Y DETALLADA: Área de la Receta
+@Composable
+fun RecetaAreaCard(
+    productoTerminado: ArticuloInventario,
+    ingredientesReceta: List<RecetaIngrediente>,
+    materiasPrimas: List<ArticuloInventario>,
+    monedaSimbolo: String,
+    tasaCambioBs: Double,
+    onEditarReceta: () -> Unit,
+    onElaborarParaVitrina: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("receta_card_${productoTerminado.id}")
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Header del Producto
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = CafeDarkBrown.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "🥐 Producto en Vitrina",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CafeDarkBrown,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (productoTerminado.codigo.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = productoTerminado.codigo,
+                                fontSize = 11.sp,
+                                color = SoftGray,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = productoTerminado.nombre,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Precio Venta: ${FormatUtils.formatCurrency(productoTerminado.precioVenta, monedaSimbolo)} (${FormatUtils.formatBs(productoTerminado.precioVenta, tasaCambioBs)})",
+                        fontSize = 11.sp,
+                        color = SoftGreen,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Badge de Stock actual en vitrina
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = CafeBrown.copy(alpha = 0.15f),
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "${formatQty(productoTerminado.stockActual)} ${productoTerminado.unidadMedida}",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp,
+                            color = CafeDarkBrown
+                        )
+                        Text(
+                            text = "En Vitrina",
+                            fontSize = 10.sp,
+                            color = SoftGray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Detalle de la Receta Base (Equivalente a 1 unidad)
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📜 Receta Base (Para 1 ${productoTerminado.unidadMedida}):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (ingredientesReceta.isEmpty()) "Configurar" else "Editar Insumos",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CafeBrown,
+                            modifier = Modifier.clickable { onEditarReceta() }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    if (ingredientesReceta.isEmpty()) {
+                        Text(
+                            text = "⚠️ Este producto no tiene receta asignada aún. Toca 'Configurar' para estipular qué insumos de materia prima consume por unidad.",
+                            fontSize = 11.sp,
+                            color = SoftRed
+                        )
+                    } else {
+                        // Tabla de ingredientes
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            ingredientesReceta.forEach { ing ->
+                                val mp = materiasPrimas.find { it.id == ing.materiaPrimaId }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "• ${ing.materiaPrimaNombre}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "${formatQty(ing.cantidadPorUnidad)} ${ing.unidadMedida}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        if (mp != null) {
+                                            Text(
+                                                text = " (Almacén: ${formatQty(mp.stockActual)} ${mp.unidadMedida})",
+                                                fontSize = 10.sp,
+                                                color = if (mp.stockActual < ing.cantidadPorUnidad * 5) SoftRed else SoftGray
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Capacidad máxima de elaboración según materia prima en stock
+                        val capacidadCalculada = ingredientesReceta.mapNotNull { ing ->
+                            val mp = materiasPrimas.find { it.id == ing.materiaPrimaId }
+                            if (mp != null && ing.cantidadPorUnidad > 0) {
+                                (mp.stockActual / ing.cantidadPorUnidad).toInt()
+                            } else null
+                        }.minOrNull() ?: 0
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = if (capacidadCalculada > 0) SoftGreen.copy(alpha = 0.12f) else SoftRed.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (capacidadCalculada > 0) "🟢" else "🔴",
+                                    fontSize = 12.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (capacidadCalculada > 0)
+                                        "Materia prima suficiente para elaborar hasta $capacidadCalculada ${productoTerminado.unidadMedida}"
+                                    else
+                                        "Insumos insuficientes en materia prima para producir este artículo",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (capacidadCalculada > 0) SoftGreen else SoftRed
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Botones de acción principales
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onElaborarParaVitrina,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CafeDarkBrown,
+                        contentColor = SmoothBeige
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("receta_elaborar_button_${productoTerminado.id}")
+                ) {
+                    Text("🥐 Pasar a Vitrina", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = onEditarReceta,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CafeBrown)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Receta", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+// DIALOG: Configuración de Receta para Producto Terminado (Equivalente a 1 Unidad)
 @Composable
 fun RecetaConfigDialog(
     productoTerminado: ArticuloInventario,
@@ -1464,17 +1813,31 @@ fun RecetaConfigDialog(
 ) {
     val ingredientesList = remember { mutableStateListOf<RecetaIngrediente>().apply { addAll(ingredientesActuales) } }
     var selectedMateriaPrimaId by remember { mutableStateOf(materiasPrimasDisponibles.firstOrNull()?.id ?: 0) }
+    var searchMateriaPrima by remember { mutableStateOf("") }
     var cantidadPorUnidadStr by remember { mutableStateOf("") }
+
+    val materiasPrimasFiltradas = remember(searchMateriaPrima, materiasPrimasDisponibles) {
+        if (searchMateriaPrima.isBlank()) materiasPrimasDisponibles
+        else materiasPrimasDisponibles.filter {
+            it.nombre.contains(searchMateriaPrima, ignoreCase = true) ||
+            it.codigo.contains(searchMateriaPrima, ignoreCase = true)
+        }
+    }
+
+    val mpSeleccionada = remember(selectedMateriaPrimaId, materiasPrimasDisponibles) {
+        materiasPrimasDisponibles.find { it.id == selectedMateriaPrimaId } ?: materiasPrimasDisponibles.firstOrNull()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("📜 Receta Estipulada", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("📜 Receta Base (Por 1 ${productoTerminado.unidadMedida})", fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Text(
-                    "Para: ${productoTerminado.nombre} (por 1 ${productoTerminado.unidadMedida})",
+                    productoTerminado.nombre,
                     fontSize = 13.sp,
-                    color = CafeBrown
+                    color = CafeBrown,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         },
@@ -1482,18 +1845,30 @@ fun RecetaConfigDialog(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 480.dp),
+                    .heightIn(max = 500.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item {
-                    Text(
-                        "Define cuánta materia prima se consume al preparar 1 unidad de este producto para la vitrina.",
-                        fontSize = 12.sp,
-                        color = SoftGray
-                    )
+                    Surface(
+                        color = CafeBrown.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "💡 Indica los ingredientes para elaborar exactamente 1 ${productoTerminado.unidadMedida} (ej: 0.08 Kg de Harina y 0.06 Kg de Pollo). Al pasar 20 a vitrina, se descontarán 1.60 Kg y 1.20 Kg automáticamente.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            lineHeight = 15.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
                 }
 
-                // Lista de ingredientes actuales
+                // Lista de ingredientes actuales de la receta
+                item {
+                    Text("Ingredientes actuales de la receta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
                 if (ingredientesList.isEmpty()) {
                     item {
                         Surface(
@@ -1502,7 +1877,7 @@ fun RecetaConfigDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                "No hay materias primas agregadas a esta receta.",
+                                "No hay materias primas agregadas a esta receta aún.",
                                 fontSize = 12.sp,
                                 color = SoftGray,
                                 modifier = Modifier.padding(12.dp)
@@ -1526,9 +1901,10 @@ fun RecetaConfigDialog(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(ing.materiaPrimaNombre, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     Text(
-                                        "${formatQty(ing.cantidadPorUnidad)} ${ing.unidadMedida} por cada ${productoTerminado.unidadMedida}",
+                                        "${formatQty(ing.cantidadPorUnidad)} ${ing.unidadMedida} por cada 1 ${productoTerminado.unidadMedida}",
                                         fontSize = 11.sp,
-                                        color = SoftGray
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                                 IconButton(onClick = { ingredientesList.remove(ing) }) {
@@ -1551,10 +1927,21 @@ fun RecetaConfigDialog(
                             color = SoftRed
                         )
                     } else {
-                        // Selección de materia prima
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Selecciona Insumo:", fontSize = 11.sp, color = SoftGray)
-                            materiasPrimasDisponibles.take(5).forEach { mp ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Buscador de Materia Prima
+                            OutlinedTextField(
+                                value = searchMateriaPrima,
+                                onValueChange = { searchMateriaPrima = it },
+                                placeholder = { Text("Buscar insumo (harina, pollo, queso, carne, aceite...)", fontSize = 11.sp) },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = CafeBrown, modifier = Modifier.size(16.dp)) },
+                                singleLine = true,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Lista de selección de insumo
+                            Text("Selecciona el insumo de almacén:", fontSize = 11.sp, color = SoftGray)
+                            materiasPrimasFiltradas.take(8).forEach { mp ->
                                 val isSelected = selectedMateriaPrimaId == mp.id
                                 Surface(
                                     color = if (isSelected) CafeBrown.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
@@ -1569,50 +1956,73 @@ fun RecetaConfigDialog(
                                         )
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(8.dp),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(mp.nombre, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
-                                        Text("${mp.unidadMedida}", fontSize = 11.sp, color = SoftGray)
+                                        Column {
+                                            Text(mp.nombre, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                                            Text("Stock almacén: ${formatQty(mp.stockActual)} ${mp.unidadMedida}", fontSize = 10.sp, color = SoftGray)
+                                        }
+                                        if (isSelected) {
+                                            Text("✓ Elegido", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CafeBrown)
+                                        }
                                     }
                                 }
                             }
 
-                            val mpSeleccionada = materiasPrimasDisponibles.find { it.id == selectedMateriaPrimaId }
-                            OutlinedTextField(
-                                value = cantidadPorUnidadStr,
-                                onValueChange = { cantidadPorUnidadStr = it },
-                                label = { Text("Cantidad por 1 ${productoTerminado.unidadMedida} (${mpSeleccionada?.unidadMedida ?: ""})") },
-                                placeholder = { Text("Ej: 0.08") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth().testTag("receta_cantidad_input")
-                            )
+                            val mpSel = mpSeleccionada
+                            if (mpSel != null) {
+                                OutlinedTextField(
+                                    value = cantidadPorUnidadStr,
+                                    onValueChange = { cantidadPorUnidadStr = it },
+                                    label = { Text("Cantidad por 1 ${productoTerminado.unidadMedida} (${mpSel.unidadMedida}) *") },
+                                    placeholder = { Text("Ej: 0.08") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth().testTag("receta_cantidad_input")
+                                )
 
-                            Button(
-                                onClick = {
-                                    val cant = cantidadPorUnidadStr.toDoubleOrNull() ?: 0.0
-                                    val mp = mpSeleccionada
-                                    if (cant > 0 && mp != null) {
-                                        // Evitar duplicados
-                                        ingredientesList.removeAll { it.materiaPrimaId == mp.id }
-                                        ingredientesList.add(
-                                            RecetaIngrediente(
-                                                productoTerminadoId = productoTerminado.id,
-                                                materiaPrimaId = mp.id,
-                                                materiaPrimaNombre = mp.nombre,
-                                                cantidadPorUnidad = cant,
-                                                unidadMedida = mp.unidadMedida
+                                // Sugerencias rápidas de cantidades
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(0.05, 0.06, 0.08, 0.10, 0.12, 0.15).forEach { sug ->
+                                        FilterChip(
+                                            selected = cantidadPorUnidadStr == sug.toString(),
+                                            onClick = { cantidadPorUnidadStr = sug.toString() },
+                                            label = { Text(sug.toString(), fontSize = 10.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = CafeBrown.copy(alpha = 0.2f),
+                                                selectedLabelColor = CafeBrown
                                             )
                                         )
-                                        cantidadPorUnidadStr = ""
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = CafeBrown),
-                                modifier = Modifier.fillMaxWidth().testTag("agregar_ingrediente_button")
-                            ) {
-                                Text("+ Agregar a la Receta", fontSize = 12.sp)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val cant = cantidadPorUnidadStr.toDoubleOrNull() ?: 0.0
+                                        if (cant > 0) {
+                                            ingredientesList.removeAll { it.materiaPrimaId == mpSel.id }
+                                            ingredientesList.add(
+                                                RecetaIngrediente(
+                                                    productoTerminadoId = productoTerminado.id,
+                                                    materiaPrimaId = mpSel.id,
+                                                    materiaPrimaNombre = mpSel.nombre,
+                                                    cantidadPorUnidad = cant,
+                                                    unidadMedida = mpSel.unidadMedida
+                                                )
+                                            )
+                                            cantidadPorUnidadStr = ""
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = CafeBrown),
+                                    modifier = Modifier.fillMaxWidth().testTag("agregar_ingrediente_button")
+                                ) {
+                                    Text("+ Agregar Insumo a la Receta", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -1625,7 +2035,7 @@ fun RecetaConfigDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown, contentColor = SmoothBeige),
                 modifier = Modifier.testTag("guardar_receta_button")
             ) {
-                Text("Guardar Receta")
+                Text("Guardar Receta Base")
             }
         },
         dismissButton = {
@@ -1646,11 +2056,11 @@ fun ElaborarProductoDialog(
     onConfirmElaborar: (cantidad: Double, motivo: String) -> Unit
 ) {
     var cantidadElaborarStr by remember { mutableStateOf("20") }
-    var motivo by remember { mutableStateOf("Elaboración matutina para vitrina de ventas") }
+    var motivo by remember { mutableStateOf("Elaboración para vitrina de ventas") }
 
     val cantElaborar = cantidadElaborarStr.toDoubleOrNull() ?: 0.0
 
-    // Cálculo de stock resultante y deducción de materias primas
+    // Cálculo de deducción de materias primas proporcional a la cantidad pasada a vitrina
     val insumosCalculados = remember(cantElaborar, ingredientesReceta, materiasPrimas) {
         ingredientesReceta.map { ing ->
             val mp = materiasPrimas.find { it.id == ing.materiaPrimaId }
@@ -1661,6 +2071,7 @@ fun ElaborarProductoDialog(
             InsumoDeduccion(
                 materiaPrimaNombre = ing.materiaPrimaNombre,
                 unidadMedida = ing.unidadMedida,
+                cantidadPorUnidad = ing.cantidadPorUnidad,
                 cantidadRebajar = cantRebajar,
                 stockActual = stockActualMP,
                 stockResultante = stockResultanteMP,
@@ -1675,7 +2086,7 @@ fun ElaborarProductoDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("🥐 Elaborar para Vitrina", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("🥐 Pasar a Vitrina de Ventas", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text(
                     productoTerminado.nombre,
                     fontSize = 14.sp,
@@ -1688,28 +2099,49 @@ fun ElaborarProductoDialog(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 480.dp),
+                    .heightIn(max = 500.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
                     Text(
-                        text = "Ingresa la cantidad que pasó a la vitrina. El sistema aumentará el stock de este producto terminado y descontará automáticamente la materia prima correspondiente.",
+                        text = "Indica cuántas unidades pasas a la vitrina (ej: 20 empanadas). El sistema aumentará el stock en vitrina y descontará automáticamente la materia prima equivalente calculada de la receta.",
                         fontSize = 12.sp,
                         color = SoftGray,
                         lineHeight = 16.sp
                     )
                 }
 
+                // Cantidad a pasar a vitrina
                 item {
-                    OutlinedTextField(
-                        value = cantidadElaborarStr,
-                        onValueChange = { cantidadElaborarStr = it },
-                        label = { Text("Cantidad a Pasar a Vitrina (${productoTerminado.unidadMedida}) *") },
-                        placeholder = { Text("Ej: 20") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("elaborar_cantidad_input")
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = cantidadElaborarStr,
+                            onValueChange = { cantidadElaborarStr = it },
+                            label = { Text("Cantidad a Pasar a Vitrina (${productoTerminado.unidadMedida}) *") },
+                            placeholder = { Text("Ej: 20") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().testTag("elaborar_cantidad_input")
+                        )
+
+                        // Sugerencias rápidas de lote (ej: 10, 20, 30, 50, 100)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(10, 20, 30, 50, 100).forEach { cant ->
+                                FilterChip(
+                                    selected = cantidadElaborarStr == cant.toString(),
+                                    onClick = { cantidadElaborarStr = cant.toString() },
+                                    label = { Text("$cant", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = CafeDarkBrown,
+                                        selectedLabelColor = SmoothBeige
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {
@@ -1722,9 +2154,9 @@ fun ElaborarProductoDialog(
                     )
                 }
 
-                // Previsualización de Materia Prima a descontar
+                // Previsualización detallada de la materia prima a descontar
                 item {
-                    Text("Rebaja Automática de Materia Prima:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Rebaja Automática de Materia Prima (${cantElaborar.toInt()} ${productoTerminado.unidadMedida}):", fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
                     if (ingredientesReceta.isEmpty()) {
                         Surface(
@@ -1759,16 +2191,22 @@ fun ElaborarProductoDialog(
                                                 fontSize = 12.sp
                                             )
                                             Text(
-                                                "Stock: ${formatQty(ins.stockActual)} ➔ ${formatQty(ins.stockResultante)} ${ins.unidadMedida}",
+                                                "Fórmula: ${formatQty(ins.cantidadPorUnidad)} ${ins.unidadMedida} x ${cantElaborar.toInt()}",
+                                                fontSize = 10.sp,
+                                                color = SoftGray
+                                            )
+                                            Text(
+                                                "Almacén: ${formatQty(ins.stockActual)} ➔ ${formatQty(ins.stockResultante)} ${ins.unidadMedida}",
                                                 fontSize = 11.sp,
-                                                color = if (ins.alcanzaStock) SoftGray else SoftRed
+                                                color = if (ins.alcanzaStock) SoftGray else SoftRed,
+                                                fontWeight = if (!ins.alcanzaStock) FontWeight.Bold else FontWeight.Normal
                                             )
                                         }
                                         Text(
                                             "-${formatQty(ins.cantidadRebajar)} ${ins.unidadMedida}",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.ExtraBold,
-                                            color = if (ins.alcanzaStock) SoftRed else SoftRed
+                                            color = SoftRed
                                         )
                                     }
                                 }
@@ -1789,10 +2227,10 @@ fun ElaborarProductoDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Stock final en vitrina:", fontSize = 13.sp)
+                            Text("Stock resultante en vitrina:", fontSize = 13.sp)
                             Text(
-                                "${formatQty(productoTerminado.stockActual + cantElaborar)} ${productoTerminado.unidadMedida}",
-                                fontSize = 16.sp,
+                                "${formatQty(productoTerminado.stockActual)} ➔ ${formatQty(productoTerminado.stockActual + cantElaborar)} ${productoTerminado.unidadMedida}",
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -1812,7 +2250,7 @@ fun ElaborarProductoDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = CafeDarkBrown, contentColor = SmoothBeige),
                 modifier = Modifier.testTag("confirm_elaborar_button")
             ) {
-                Text("Confirmar y Rebajar")
+                Text("Confirmar y Pasar a Vitrina")
             }
         },
         dismissButton = {
@@ -1826,6 +2264,7 @@ fun ElaborarProductoDialog(
 data class InsumoDeduccion(
     val materiaPrimaNombre: String,
     val unidadMedida: String,
+    val cantidadPorUnidad: Double,
     val cantidadRebajar: Double,
     val stockActual: Double,
     val stockResultante: Double,
@@ -1839,3 +2278,4 @@ private fun formatQty(num: Double): String {
         String.format(Locale.US, "%.2f", num)
     }
 }
+
